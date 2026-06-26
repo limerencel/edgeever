@@ -4,6 +4,8 @@
 >
 > **EdgeEver：基于 Cloudflare 全家桶自托管的开源『印象笔记』。**
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/msh01/edgeever)
+
 EdgeEver 是一个完全开源、支持自部署、面向人类和 AI Agent 的现代笔记工作区。
 
 它致敬经典印象笔记的大屏三栏交互：笔记本目录、笔记列表、主编辑区。但 EdgeEver 不想复刻臃肿的旧时代套件，而是用 Cloudflare 的边缘网络、轻量前端、开放 API、MCP 和 CLI，把笔记系统重新做成一个可自托管、可编程、可被 AI 读写的个人知识库底座。
@@ -117,6 +119,16 @@ content_text      全文搜索、摘要、embedding 使用的纯文本
 
 ## Cloudflare 初始化
 
+公开仓库可以直接通过上方 **Deploy to Cloudflare** 按钮部署。Cloudflare 会读取 `wrangler.toml`，并在部署流程里为 D1/R2 等绑定创建或配置所需资源。
+
+如果你更喜欢 CLI 部署，先创建本机环境文件：
+
+```sh
+cp .env.example .env.local
+```
+
+`.env.local` 已被 `.gitignore` 忽略，用来保存本机 Cloudflare 账号、资源名称、API Token 等部署参数。不要把它提交到公开仓库。
+
 创建 D1 数据库和 R2 存储桶：
 
 ```sh
@@ -124,7 +136,7 @@ bunx wrangler d1 create edgeever
 bunx wrangler r2 bucket create edgeever-resources
 ```
 
-把 D1 创建命令返回的 `database_id` 填入 `wrangler.toml`。
+把 D1 创建命令返回的 `database_id` 填入本机 `.env.local` 的 `EDGE_EVER_D1_DATABASE_ID`，并同步替换 `wrangler.toml` 里的 `database_id` 占位值。
 
 应用本地迁移：
 
