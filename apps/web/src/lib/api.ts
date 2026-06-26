@@ -178,6 +178,12 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  moveMemos: (payload: { memoIds: string[]; notebookId: string }) =>
+    request<{ ok: true; moved: number }>("/api/v1/memos/batch/move", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   getMemo: (memoId: string, options?: { includeDeleted?: boolean }) => {
     const search = new URLSearchParams();
 

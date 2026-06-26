@@ -62,6 +62,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent,
   type FormEvent,
   type MouseEvent,
   type ReactNode,
@@ -74,6 +75,7 @@ import { Button } from "@/components/ui/button";
 
 type Pane = "notebooks" | "memos" | "editor";
 type MemoView = "notebook" | "trash";
+type NotebookDropPosition = "before" | "inside" | "after";
 
 const IMAGE_COMPRESSION_STORAGE_KEY = "edgeever.imageCompressionEnabled";
 
@@ -249,8 +251,13 @@ const WorkspaceApp = ({
   });
 
   const updateNotebookMutation = useMutation({
-    mutationFn: ({ notebookId, name }: { notebookId: string; name: string }) =>
-      api.updateNotebook(notebookId, { name }),
+    mutationFn: ({
+      notebookId,
+      payload,
+    }: {
+      notebookId: string;
+      payload: { name?: string; parentId?: string | null; sortOrder?: number };
+    }) => api.updateNotebook(notebookId, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
     },
@@ -288,6 +295,15 @@ const WorkspaceApp = ({
       queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
       setSelectedMemoId(data.memo.id);
       setActivePane("editor");
+    },
+  });
+
+  const moveMemosMutation = useMutation({
+    mutationFn: api.moveMemos,
+    onSuccess: async () => {
+      setSelectedMemoIds(new Set());
+      await queryClient.invalidateQueries({ queryKey: ["memos"] });
+      await queryClient.invalidateQueries({ queryKey: ["memo"] });
     },
   });
 
@@ -331,7 +347,7 @@ const WorkspaceApp = ({
       return;
     }
 
-    updateNotebookMutation.mutate({ notebookId: notebook.id, name: name.trim() });
+    updateNotebookMutation.mutate({ notebookId: notebook.id, payload: { name: name.trim() } });
   };
 
   const handleDeleteNotebook = (notebook: Notebook) => {
@@ -357,6 +373,41 @@ const WorkspaceApp = ({
       title: "Untitled memo",
       contentMarkdown: "",
       tags: [],
+    });
+  };
+
+  const handleMoveNotebook = (
+    notebookId: string,
+    targetNotebookId: string,
+    position: NotebookDropPosition
+  ) => {
+    if (notebookId === targetNotebookId) {
+      return;
+    }
+
+    const target = notebooks.find((notebook) => notebook.id === targetNotebookId);
+
+    if (!target) {
+      return;
+    }
+
+    updateNotebookMutation.mutate({
+      notebookId,
+      payload: {
+        parentId: position === "inside" ? target.id : target.parentId,
+        sortOrder: position === "inside" ? Date.now() : getNotebookDropSortOrder(notebooks, target, position),
+      },
+    });
+  };
+
+  const handleMoveSelectedMemos = (targetNotebookId: string) => {
+    if (selectedMemoIds.size === 0 || memoView === "trash") {
+      return;
+    }
+
+    moveMemosMutation.mutate({
+      memoIds: Array.from(selectedMemoIds),
+      notebookId: targetNotebookId,
     });
   };
 
@@ -396,6 +447,7 @@ const WorkspaceApp = ({
             onCreateNotebook={handleCreateNotebook}
             onRenameNotebook={handleRenameNotebook}
             onDeleteNotebook={handleDeleteNotebook}
+            onMoveNotebook={handleMoveNotebook}
             onBackToList={() => setActivePane("memos")}
             onLogout={onLogout}
             isLoggingOut={isLoggingOut}
@@ -421,6 +473,7 @@ const WorkspaceApp = ({
         >
           <MemoListPane
             notebook={selectedNotebook}
+            notebooks={notebooks}
             view={memoView}
             memos={memos}
             selectedMemoId={selectedMemoId}
@@ -429,6 +482,7 @@ const WorkspaceApp = ({
             isLoading={memosQuery.isLoading}
             isCreating={createMemoMutation.isPending}
             isMerging={mergeMutation.isPending}
+            isMoving={moveMemosMutation.isPending}
             multiSelectKeyDown={multiSelectKeyDown}
             onBackToNotebooks={() => setActivePane("notebooks")}
             onSearch={setSearch}
@@ -441,6 +495,7 @@ const WorkspaceApp = ({
               setSelectedMemoIds((current) => toggleMemoSelection(current, memoId));
             }}
             onMerge={handleMerge}
+            onMoveSelectedMemos={handleMoveSelectedMemos}
           />
         </section>
 
@@ -585,6 +640,49 @@ const toggleMemoSelection = (current: Set<string>, memoId: string) => {
   return next;
 };
 
+const getNotebookDropPosition = (event: DragEvent<HTMLElement>): NotebookDropPosition => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const offset = event.clientY - rect.top;
+
+  if (offset < rect.height * 0.28) {
+    return "before";
+  }
+
+  if (offset > rect.height * 0.72) {
+    return "after";
+  }
+
+  return "inside";
+};
+
+const getNotebookDropSortOrder = (
+  notebooks: Notebook[],
+  target: Notebook,
+  position: Exclude<NotebookDropPosition, "inside">
+) => {
+  const siblings = notebooks
+    .filter((notebook) => notebook.parentId === target.parentId)
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name));
+  const targetIndex = siblings.findIndex((notebook) => notebook.id === target.id);
+  const insertionIndex = targetIndex < 0 ? siblings.length : position === "before" ? targetIndex : targetIndex + 1;
+  const previous = siblings[insertionIndex - 1];
+  const next = siblings[insertionIndex];
+
+  if (!previous && !next) {
+    return target.sortOrder + (position === "before" ? -1000 : 1000);
+  }
+
+  if (!previous) {
+    return next.sortOrder - 1000;
+  }
+
+  if (!next) {
+    return previous.sortOrder + 1000;
+  }
+
+  return Math.floor((previous.sortOrder + next.sortOrder) / 2);
+};
+
 const NotebookPane = ({
   authRequired,
   user,
@@ -595,6 +693,7 @@ const NotebookPane = ({
   onCreateNotebook,
   onRenameNotebook,
   onDeleteNotebook,
+  onMoveNotebook,
   onBackToList,
   onLogout,
   isLoggingOut,
@@ -614,6 +713,7 @@ const NotebookPane = ({
   onCreateNotebook: (parentId?: string | null) => void;
   onRenameNotebook: (notebook: Notebook) => void;
   onDeleteNotebook: (notebook: Notebook) => void;
+  onMoveNotebook: (notebookId: string, targetNotebookId: string, position: NotebookDropPosition) => void;
   onBackToList: () => void;
   onLogout: () => void;
   isLoggingOut: boolean;
@@ -664,6 +764,7 @@ const NotebookPane = ({
                 onCreateNotebook={onCreateNotebook}
                 onRenameNotebook={onRenameNotebook}
                 onDeleteNotebook={onDeleteNotebook}
+                onMoveNotebook={onMoveNotebook}
               />
             ))}
           </div>
@@ -713,6 +814,7 @@ const NotebookTreeItem = ({
   onCreateNotebook,
   onRenameNotebook,
   onDeleteNotebook,
+  onMoveNotebook,
 }: {
   node: NotebookNode;
   depth: number;
@@ -721,19 +823,54 @@ const NotebookTreeItem = ({
   onCreateNotebook: (parentId?: string | null) => void;
   onRenameNotebook: (notebook: Notebook) => void;
   onDeleteNotebook: (notebook: Notebook) => void;
+  onMoveNotebook: (notebookId: string, targetNotebookId: string, position: NotebookDropPosition) => void;
 }) => {
   const [open, setOpen] = useState(true);
   const hasChildren = node.children.length > 0;
   const selected = node.id === selectedNotebookId;
   const isInbox = node.slug === "inbox";
+  const [dropPosition, setDropPosition] = useState<NotebookDropPosition | null>(null);
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropPosition(getNotebookDropPosition(event));
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const notebookId = event.dataTransfer.getData("application/x-edgeever-notebook");
+    const position = getNotebookDropPosition(event);
+    setDropPosition(null);
+
+    if (!notebookId || notebookId === node.id) {
+      return;
+    }
+
+    onMoveNotebook(notebookId, node.id, position);
+    setOpen(true);
+  };
 
   return (
     <div>
       <div
         className={cn(
           "group flex h-9 items-center gap-1 rounded-md px-2 text-sm transition",
-          selected ? "border border-emerald-200 bg-emerald-100 text-emerald-950" : "text-slate-700 hover:bg-emerald-50"
+          selected ? "border border-emerald-200 bg-emerald-100 text-emerald-950" : "text-slate-700 hover:bg-emerald-50",
+          dropPosition === "inside" && "ring-2 ring-emerald-300",
+          dropPosition === "before" && "shadow-[inset_0_2px_0_0_#34d399]",
+          dropPosition === "after" && "shadow-[inset_0_-2px_0_0_#34d399]"
         )}
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("application/x-edgeever-notebook", node.id);
+          event.dataTransfer.setData("text/plain", node.id);
+        }}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setDropPosition(null)}
+        onDrop={handleDrop}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
       >
         <button
@@ -803,6 +940,7 @@ const NotebookTreeItem = ({
               onCreateNotebook={onCreateNotebook}
               onRenameNotebook={onRenameNotebook}
               onDeleteNotebook={onDeleteNotebook}
+              onMoveNotebook={onMoveNotebook}
             />
           ))}
         </div>
@@ -813,6 +951,7 @@ const NotebookTreeItem = ({
 
 const MemoListPane = ({
   notebook,
+  notebooks,
   view,
   memos,
   selectedMemoId,
@@ -821,6 +960,7 @@ const MemoListPane = ({
   isLoading,
   isCreating,
   isMerging,
+  isMoving,
   multiSelectKeyDown,
   onBackToNotebooks,
   onSearch,
@@ -828,8 +968,10 @@ const MemoListPane = ({
   onOpenMemo,
   onToggleMemo,
   onMerge,
+  onMoveSelectedMemos,
 }: {
   notebook: Notebook | null;
+  notebooks: Notebook[];
   view: MemoView;
   memos: MemoSummary[];
   selectedMemoId: string | null;
@@ -838,6 +980,7 @@ const MemoListPane = ({
   isLoading: boolean;
   isCreating: boolean;
   isMerging: boolean;
+  isMoving: boolean;
   multiSelectKeyDown: boolean;
   onBackToNotebooks: () => void;
   onSearch: (value: string) => void;
@@ -845,7 +988,17 @@ const MemoListPane = ({
   onOpenMemo: (memoId: string) => void;
   onToggleMemo: (memoId: string) => void;
   onMerge: () => void;
-}) => (
+  onMoveSelectedMemos: (notebookId: string) => void;
+}) => {
+  const [moveTargetNotebookId, setMoveTargetNotebookId] = useState(notebook?.id ?? notebooks[0]?.id ?? "");
+
+  useEffect(() => {
+    if (notebook?.id) {
+      setMoveTargetNotebookId(notebook.id);
+    }
+  }, [notebook?.id]);
+
+  return (
   <div className="relative flex h-full min-h-0 flex-col">
     <header className="border-b border-emerald-100 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:py-3">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -886,20 +1039,44 @@ const MemoListPane = ({
 
     <div className="relative min-h-0 flex-1 overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       {selectedMemoIds.size > 0 ? (
-        <div className="sticky top-0 z-10 mb-3 flex items-center justify-between rounded-md border border-emerald-100 bg-white px-3 py-2 shadow-panel">
+        <div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-emerald-100 bg-white px-3 py-2 shadow-panel">
           <div className="flex items-center gap-2 text-sm font-medium">
             <CheckSquare className="h-4 w-4 text-emerald-700" />
             {selectedMemoIds.size} selected
           </div>
-          <Button
-            size="sm"
-            variant="solid"
-            onClick={onMerge}
-            disabled={selectedMemoIds.size < 2 || isMerging || view === "trash"}
-          >
-            <Merge className="h-4 w-4" />
-            合并
-          </Button>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <select
+              className="h-8 max-w-40 rounded-md border border-emerald-100 bg-emerald-50/70 px-2 text-xs text-emerald-900 outline-none disabled:opacity-50"
+              value={moveTargetNotebookId}
+              disabled={view === "trash" || notebooks.length === 0 || isMoving}
+              onChange={(event) => setMoveTargetNotebookId(event.target.value)}
+              title="移动到笔记本"
+            >
+              {notebooks.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="soft"
+              onClick={() => onMoveSelectedMemos(moveTargetNotebookId)}
+              disabled={!moveTargetNotebookId || isMoving || view === "trash"}
+            >
+              <Folder className="h-4 w-4" />
+              移动
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              onClick={onMerge}
+              disabled={selectedMemoIds.size < 2 || isMerging || view === "trash"}
+            >
+              <Merge className="h-4 w-4" />
+              合并
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -938,7 +1115,8 @@ const MemoListPane = ({
       </button>
     ) : null}
   </div>
-);
+  );
+};
 
 const MemoCard = ({
   memo,

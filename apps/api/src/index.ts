@@ -9,6 +9,7 @@ import {
   MemoCreateSchema,
   MemoUpdateSchema,
   MergeMemosSchema,
+  MoveMemosSchema,
   normalizeTags,
   TagRenameSchema,
   NotebookCreateSchema,
@@ -470,27 +471,17 @@ app.patch("/api/v1/notebooks/:id", zValidator("json", NotebookUpdateSchema), asy
   const id = c.req.param("id");
   const input = c.req.valid("json");
   const actor = getAuditActor(c);
-  const current = await getNotebook(c.env.DB, id);
 
-  if (!current) {
-    return notFound(c, "Notebook not found");
+  try {
+    const notebook = await updateNotebookRecord(c.env.DB, id, input, actor);
+    return c.json({ notebook });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiError(c, error.code, error.message, error.status);
+    }
+
+    throw error;
   }
-
-  const nextName = input.name ?? current.name;
-  const nextParentId = input.parentId === undefined ? current.parentId : input.parentId;
-  const nextSortOrder = input.sortOrder ?? current.sortOrder;
-  const now = isoNow();
-
-  await c.env.DB.prepare(
-    `UPDATE notebooks
-     SET name = ?, slug = ?, parent_id = ?, sort_order = ?, updated_at = ?
-     WHERE id = ? AND is_deleted = 0`
-  )
-    .bind(nextName, slugify(nextName), nextParentId ?? null, nextSortOrder, now, id)
-    .run();
-
-  await audit(c.env.DB, actor.actorType, actor.actorId, "notebook.update", "notebook", id, input);
-  return c.json({ notebook: await getNotebook(c.env.DB, id) });
 });
 
 app.delete("/api/v1/notebooks/:id", async (c) => {
@@ -691,6 +682,36 @@ app.post("/api/v1/memos", zValidator("json", MemoCreateSchema), async (c) => {
   ]);
 
   return c.json({ memo: await getMemoDetail(c.env.DB, id) }, 201);
+});
+
+app.post("/api/v1/memos/batch/move", zValidator("json", MoveMemosSchema), async (c) => {
+  const denied = requireScopes(c, "write:memos");
+
+  if (denied) {
+    return denied;
+  }
+
+  const input = c.req.valid("json");
+  const target = await getNotebook(c.env.DB, input.notebookId);
+
+  if (!target) {
+    return notFound(c, "Target notebook not found");
+  }
+
+  const actor = getAuditActor(c);
+  const actorLabel = getActorLabel(c);
+
+  try {
+    const moved = await moveMemosToNotebook(c.env.DB, input.memoIds, input.notebookId, actor, actorLabel);
+
+    return c.json({ ok: true, moved });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiError(c, error.code, error.message, error.status);
+    }
+
+    throw error;
+  }
 });
 
 app.get("/api/v1/memos/:id", async (c) => {
@@ -1150,93 +1171,17 @@ app.post("/api/v1/memos/merge", zValidator("json", MergeMemosSchema), async (c) 
   const input = c.req.valid("json");
   const actor = getAuditActor(c);
   const actorLabel = getActorLabel(c);
-  const uniqueMemoIds = Array.from(new Set(input.memoIds));
-  const placeholders = uniqueMemoIds.map(() => "?").join(", ");
-  const rows = await c.env.DB.prepare(
-    `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
-            m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, c.revision,
-            c.content_json, c.content_markdown, c.content_text, c.content_hash,
-            m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
-     FROM memos m
-     INNER JOIN memo_contents c ON c.memo_id = m.id
-     WHERE m.is_deleted = 0 AND m.id IN (${placeholders})`
-  )
-    .bind(...uniqueMemoIds)
-    .all<MemoDetailRow>();
 
-  if (rows.results.length !== uniqueMemoIds.length) {
-    return c.json(
-      {
-        error: {
-          code: "missing_memos",
-          message: "One or more memos cannot be merged.",
-        },
-      },
-      400
-    );
+  try {
+    const memo = await mergeMemosRecord(c.env.DB, input, actor, actorLabel);
+    return c.json({ memo }, 201);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiError(c, error.code, error.message, error.status);
+    }
+
+    throw error;
   }
-
-  const ordered = uniqueMemoIds
-    .map((memoId) => rows.results.find((row) => row.id === memoId))
-    .filter((row): row is MemoDetailRow => Boolean(row));
-  const notebookId = input.notebookId ?? ordered[0].notebook_id;
-  const title = input.title || `合并笔记 ${new Date().toLocaleDateString("zh-CN")}`;
-  const mergedMarkdown = ordered.map((memo) => memo.content_markdown).join("\n\n---\n\n");
-  const contentJson = markdownToDoc(mergedMarkdown);
-  const contentText = docToText(contentJson);
-  const tags = Array.from(new Set(ordered.flatMap((memo) => parseJsonArray(memo.tags_json))));
-  const excerpt = createExcerpt(contentText || title);
-  const contentHash = await sha256(mergedMarkdown + JSON.stringify(contentJson));
-  const newMemoId = createId("memo");
-  const now = isoNow();
-
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      `INSERT INTO memos (
-        id, notebook_id, title, excerpt, tags_json, source_memo_ids, merge_source_count,
-        created_by, updated_by, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      newMemoId,
-      notebookId,
-      title,
-      excerpt,
-      JSON.stringify(tags),
-      JSON.stringify(uniqueMemoIds),
-      uniqueMemoIds.length,
-      actorLabel,
-      actorLabel,
-      now,
-      now
-    ),
-    c.env.DB.prepare(
-      `INSERT INTO memo_contents (
-        memo_id, content_json, content_markdown, content_text, content_hash, revision, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, 0, ?, ?)`
-    ).bind(newMemoId, JSON.stringify(contentJson), mergedMarkdown, contentText, contentHash, now, now),
-    c.env.DB.prepare(
-      `INSERT INTO memos_fts (memo_id, title, content_text, tags)
-       VALUES (?, ?, ?, ?)`
-    ).bind(newMemoId, title, contentText, tags.join(" ")),
-    c.env.DB.prepare(
-      `UPDATE memos
-       SET is_deleted = 1, deleted_at = ?, merged_into_memo_id = ?, merged_at = ?, updated_at = ?
-       WHERE id IN (${placeholders})`
-    ).bind(now, newMemoId, now, now, ...uniqueMemoIds),
-    c.env.DB.prepare(`DELETE FROM memos_fts WHERE memo_id IN (${placeholders})`).bind(...uniqueMemoIds),
-    c.env.DB.prepare(
-      `UPDATE resources
-       SET original_memo_id = COALESCE(original_memo_id, memo_id),
-           memo_id = ?,
-           updated_at = ?
-       WHERE memo_id IN (${placeholders})`
-    ).bind(newMemoId, now, ...uniqueMemoIds),
-    auditStatement(c.env.DB, actor.actorType, actor.actorId, "memo.merge", "memo", newMemoId, {
-      sourceMemoIds: uniqueMemoIds,
-    }),
-  ]);
-
-  return c.json({ memo: await getMemoDetail(c.env.DB, newMemoId) }, 201);
 });
 
 app.get("/mcp", (c) =>
@@ -1250,77 +1195,37 @@ app.get("/mcp", (c) =>
 );
 
 app.post("/mcp", async (c) => {
-  let request: JsonRpcRequest;
+  let payload: unknown;
 
   try {
-    request = (await c.req.json()) as JsonRpcRequest;
+    payload = await c.req.json();
   } catch {
     return c.json(jsonRpcError(null, -32700, "Parse error"), 400);
   }
 
-  if (!request || request.jsonrpc !== "2.0" || typeof request.method !== "string") {
-    return c.json(jsonRpcError(getJsonRpcId(request), -32600, "Invalid Request"), 400);
+  if (Array.isArray(payload)) {
+    if (payload.length === 0) {
+      return c.json(jsonRpcError(null, -32600, "Invalid Request"), 400);
+    }
+
+    const results = await Promise.all(payload.map((request) => handleMcpMessage(c, request)));
+    const responses = results.filter((result): result is JsonRpcHandlerResult => Boolean(result));
+    const bodies = responses.map((response) => response.body);
+
+    if (bodies.length === 0) {
+      return new Response(null, { status: 204 });
+    }
+
+    return c.json(bodies, Math.max(...responses.map((response) => response.status)) as 200);
   }
 
-  if (request.method === "notifications/initialized" && request.id === undefined) {
+  const result = await handleMcpMessage(c, payload);
+
+  if (!result) {
     return new Response(null, { status: 204 });
   }
 
-  if (request.method === "initialize") {
-    return c.json(
-      jsonRpcResult(request.id ?? null, {
-        protocolVersion: "2024-11-05",
-        capabilities: {
-          tools: {},
-        },
-        serverInfo: {
-          name: "edgeever",
-          version: "0.1.0",
-        },
-      })
-    );
-  }
-
-  const auth = await authenticateRequest(c, true);
-
-  if (!auth) {
-    return c.json(jsonRpcError(request.id ?? null, -32001, "Authentication required"), 401);
-  }
-
-  c.set("auth", auth);
-
-  if (request.method === "tools/list") {
-    return c.json(
-      jsonRpcResult(request.id ?? null, {
-        tools: MCP_TOOLS,
-      })
-    );
-  }
-
-  if (request.method === "tools/call") {
-    const params = asRecord(request.params);
-    const name = typeof params.name === "string" ? params.name : "";
-    const args = asRecord(params.arguments);
-
-    try {
-      const result = await callMcpTool(c, auth, name, args);
-      return c.json(
-        jsonRpcResult(request.id ?? null, {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        })
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Tool call failed";
-      return c.json(jsonRpcError(request.id ?? null, -32000, message), 400);
-    }
-  }
-
-  return c.json(jsonRpcError(request.id ?? null, -32601, "Method not found"), 404);
+  return c.json(result.body, result.status as 200);
 });
 
 app.notFound((c) =>
@@ -1345,6 +1250,147 @@ type JsonRpcRequest = {
 };
 
 type JsonRpcId = string | number | null;
+type JsonRpcHandlerResult = {
+  body: unknown;
+  status: number;
+};
+
+class AppError extends Error {
+  code: string;
+  status: number;
+
+  constructor(code: string, message: string, status = 400) {
+    super(message);
+    this.name = "AppError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const MCP_PROTOCOL_VERSION = "2024-11-05";
+
+const handleMcpMessage = async (c: AppContext, payload: unknown): Promise<JsonRpcHandlerResult | null> => {
+  const request = payload as JsonRpcRequest;
+  const id = getJsonRpcId(payload);
+  const isNotification =
+    payload &&
+    typeof payload === "object" &&
+    !("id" in payload) &&
+    typeof (payload as JsonRpcRequest).method === "string";
+
+  if (!request || request.jsonrpc !== "2.0" || typeof request.method !== "string") {
+    return { body: jsonRpcError(id, -32600, "Invalid Request"), status: 400 };
+  }
+
+  if (request.method === "notifications/initialized" && isNotification) {
+    return null;
+  }
+
+  if (request.method === "initialize") {
+    return {
+      body: jsonRpcResult(request.id ?? null, {
+        protocolVersion: MCP_PROTOCOL_VERSION,
+        capabilities: {
+          tools: {
+            listChanged: false,
+          },
+        },
+        serverInfo: {
+          name: "edgeever",
+          version: "0.1.0",
+        },
+        instructions:
+          "Use scoped EdgeEver API tokens. Prefer read-only scopes for search/list/get tools and grant write scopes only to agents that modify notes.",
+      }),
+      status: 200,
+    };
+  }
+
+  const auth = await authenticateRequest(c, true);
+
+  if (!auth) {
+    return { body: jsonRpcError(request.id ?? null, -32001, "Authentication required"), status: 401 };
+  }
+
+  c.set("auth", auth);
+
+  if (request.method === "tools/list") {
+    return {
+      body: jsonRpcResult(request.id ?? null, {
+        tools: MCP_TOOLS,
+      }),
+      status: 200,
+    };
+  }
+
+  if (request.method === "tools/call") {
+    const params = asRecord(request.params);
+    const name = getOptionalString(params.name);
+
+    if (!name) {
+      return { body: jsonRpcError(request.id ?? null, -32602, "Tool name is required"), status: 400 };
+    }
+
+    try {
+      const result = await callMcpTool(c, auth, name, asRecord(params.arguments));
+      return {
+        body: jsonRpcResult(request.id ?? null, {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+          isError: false,
+        }),
+        status: 200,
+      };
+    } catch (error) {
+      const mapped = mapMcpToolError(error);
+      return {
+        body: jsonRpcError(request.id ?? null, mapped.rpcCode, mapped.message, mapped.data),
+        status: mapped.status,
+      };
+    }
+  }
+
+  if (isNotification) {
+    return null;
+  }
+
+  return { body: jsonRpcError(request.id ?? null, -32601, "Method not found"), status: 404 };
+};
+
+const mapMcpToolError = (error: unknown) => {
+  if (error instanceof AppError) {
+    const rpcCode =
+      error.status === 401
+        ? -32001
+        : error.status === 403
+          ? -32003
+          : error.status === 404
+            ? -32004
+            : error.status === 409
+              ? -32009
+              : -32602;
+
+    return {
+      rpcCode,
+      status: error.status,
+      message: error.message,
+      data: {
+        code: error.code,
+      },
+    };
+  }
+
+  return {
+    rpcCode: -32000,
+    status: 400,
+    message: error instanceof Error ? error.message : "Tool call failed",
+    data: undefined,
+  };
+};
 
 const MCP_TOOLS = [
   {
@@ -1352,10 +1398,11 @@ const MCP_TOOLS = [
     description: "Search active EdgeEver memos by text, tag, or notebook.",
     inputSchema: {
       type: "object",
+      additionalProperties: false,
       properties: {
         query: { type: "string" },
         notebookId: { type: "string" },
-        limit: { type: "number", minimum: 1, maximum: 50 },
+        limit: { type: "integer", minimum: 1, maximum: 50 },
       },
     },
   },
@@ -1365,6 +1412,7 @@ const MCP_TOOLS = [
     inputSchema: {
       type: "object",
       required: ["memoId"],
+      additionalProperties: false,
       properties: {
         memoId: { type: "string" },
       },
@@ -1376,6 +1424,7 @@ const MCP_TOOLS = [
     inputSchema: {
       type: "object",
       required: ["notebookId"],
+      additionalProperties: false,
       properties: {
         notebookId: { type: "string" },
         title: { type: "string" },
@@ -1390,13 +1439,55 @@ const MCP_TOOLS = [
     inputSchema: {
       type: "object",
       required: ["memoId"],
+      additionalProperties: false,
       properties: {
         memoId: { type: "string" },
         title: { type: "string" },
         contentMarkdown: { type: "string" },
         tags: { type: "array", items: { type: "string" } },
         notebookId: { type: "string" },
-        expectedRevision: { type: "number" },
+        expectedRevision: { type: "integer", minimum: 0 },
+      },
+    },
+  },
+  {
+    name: "move_memos",
+    description: "Move one or more active memos to another notebook.",
+    inputSchema: {
+      type: "object",
+      required: ["memoIds", "notebookId"],
+      additionalProperties: false,
+      properties: {
+        memoIds: { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } },
+        notebookId: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "merge_memos",
+    description: "Merge multiple active memos into a new memo and soft-delete the sources.",
+    inputSchema: {
+      type: "object",
+      required: ["memoIds"],
+      additionalProperties: false,
+      properties: {
+        memoIds: { type: "array", minItems: 2, maxItems: 50, items: { type: "string" } },
+        notebookId: { type: "string" },
+        title: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "move_notebook",
+    description: "Move a notebook under another notebook or root and update its sort order.",
+    inputSchema: {
+      type: "object",
+      required: ["notebookId"],
+      additionalProperties: false,
+      properties: {
+        notebookId: { type: "string" },
+        parentId: { type: ["string", "null"] },
+        sortOrder: { type: "integer" },
       },
     },
   },
@@ -1405,6 +1496,7 @@ const MCP_TOOLS = [
     description: "List active notebooks.",
     inputSchema: {
       type: "object",
+      additionalProperties: false,
       properties: {},
     },
   },
@@ -1413,6 +1505,7 @@ const MCP_TOOLS = [
     description: "List tags and memo counts.",
     inputSchema: {
       type: "object",
+      additionalProperties: false,
       properties: {},
     },
   },
@@ -1488,6 +1581,54 @@ const callMcpTool = async (
 
       return { memo: result.memo };
     }
+    case "move_memos": {
+      assertScope(auth, "write:memos");
+      const notebookId = getRequiredString(args.notebookId, "notebookId");
+      const memoIds = getRequiredStringArray(args.memoIds, "memoIds");
+      const target = await getNotebook(c.env.DB, notebookId);
+
+      if (!target) {
+        throw new AppError("not_found", "Target notebook not found", 404);
+      }
+
+      const actor = getAuditActor(c);
+      const actorLabel = getActorLabel(c);
+      const moved = await moveMemosToNotebook(c.env.DB, memoIds, notebookId, actor, actorLabel);
+
+      return { ok: true, moved };
+    }
+    case "merge_memos": {
+      assertScope(auth, "write:memos");
+      const actor = getAuditActor(c);
+      const actorLabel = getActorLabel(c);
+      const memo = await mergeMemosRecord(
+        c.env.DB,
+        {
+          memoIds: getRequiredStringArray(args.memoIds, "memoIds"),
+          notebookId: getOptionalString(args.notebookId) ?? undefined,
+          title: getOptionalString(args.title) ?? undefined,
+        },
+        actor,
+        actorLabel
+      );
+
+      return { memo };
+    }
+    case "move_notebook": {
+      assertScope(auth, "write:notebooks");
+      const actor = getAuditActor(c);
+      const notebook = await updateNotebookRecord(
+        c.env.DB,
+        getRequiredString(args.notebookId, "notebookId"),
+        {
+          parentId: args.parentId === null ? null : getOptionalString(args.parentId) ?? undefined,
+          sortOrder: typeof args.sortOrder === "number" && Number.isInteger(args.sortOrder) ? args.sortOrder : undefined,
+        },
+        actor
+      );
+
+      return { notebook };
+    }
     case "list_notebooks": {
       assertScope(auth, "read:notebooks");
       return { notebooks: await listNotebooks(c.env.DB) };
@@ -1535,7 +1676,7 @@ const getRequiredString = (value: unknown, name: string) => {
   const parsed = getOptionalString(value);
 
   if (!parsed) {
-    throw new Error(`${name} is required`);
+    throw new AppError("invalid_params", `${name} is required`, 400);
   }
 
   return parsed;
@@ -1543,6 +1684,16 @@ const getRequiredString = (value: unknown, name: string) => {
 
 const getOptionalStringArray = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+
+const getRequiredStringArray = (value: unknown, name: string) => {
+  const items = getOptionalStringArray(value);
+
+  if (items.length === 0) {
+    throw new AppError("invalid_params", `${name} must include at least one item`, 400);
+  }
+
+  return items;
+};
 
 const isAuthRequired = async (env: Bindings) => {
   if (env.EDGE_EVER_AUTH_PASSWORD_HASH?.trim()) {
@@ -1778,7 +1929,7 @@ const requireScopes = (c: AppContext, ...scopes: TokenScope[]) => {
 
 const assertScope = (auth: AuthContext, scope: TokenScope) => {
   if (!hasScopes(auth, [scope])) {
-    throw new Error(`Missing required scope: ${scope}`);
+    throw new AppError("forbidden", `Missing required scope: ${scope}`, 403);
   }
 };
 
@@ -2202,6 +2353,85 @@ const getNotebook = async (db: D1Database, id: string): Promise<Notebook | null>
   return row ? mapNotebook(row) : null;
 };
 
+const updateNotebookRecord = async (
+  db: D1Database,
+  id: string,
+  input: { name?: string; parentId?: string | null; sortOrder?: number },
+  actor: { actorType: "user" | "agent"; actorId: string | null }
+) => {
+  const current = await getNotebook(db, id);
+
+  if (!current) {
+    throw new AppError("not_found", "Notebook not found", 404);
+  }
+
+  const nextName = input.name ?? current.name;
+  const nextParentId = input.parentId === undefined ? current.parentId : input.parentId;
+  const nextSortOrder = input.sortOrder ?? current.sortOrder;
+  const now = isoNow();
+
+  if (nextParentId === id) {
+    throw new AppError("bad_request", "Notebook cannot be its own parent", 400);
+  }
+
+  if (nextParentId) {
+    const parent = await getNotebook(db, nextParentId);
+
+    if (!parent) {
+      throw new AppError("not_found", "Parent notebook not found", 404);
+    }
+
+    if (await isNotebookDescendant(db, nextParentId, id)) {
+      throw new AppError("notebook_cycle", "Notebook cannot be moved into its own descendant.", 409);
+    }
+  }
+
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE notebooks
+         SET name = ?, slug = ?, parent_id = ?, sort_order = ?, updated_at = ?
+         WHERE id = ? AND is_deleted = 0`
+      )
+      .bind(nextName, slugify(nextName), nextParentId ?? null, nextSortOrder, now, id),
+    auditStatement(db, actor.actorType, actor.actorId, "notebook.update", "notebook", id, input),
+  ]);
+
+  const notebook = await getNotebook(db, id);
+
+  if (!notebook) {
+    throw new AppError("not_found", "Notebook not found after update", 404);
+  }
+
+  return notebook;
+};
+
+const isNotebookDescendant = async (db: D1Database, candidateId: string, ancestorId: string) => {
+  const row = await db
+    .prepare(
+      `WITH RECURSIVE descendants(id) AS (
+         SELECT id
+         FROM notebooks
+         WHERE parent_id = ? AND is_deleted = 0
+
+         UNION ALL
+
+         SELECT n.id
+         FROM notebooks n
+         INNER JOIN descendants d ON n.parent_id = d.id
+         WHERE n.is_deleted = 0
+       )
+       SELECT id
+       FROM descendants
+       WHERE id = ?
+       LIMIT 1`
+    )
+    .bind(ancestorId, candidateId)
+    .first<{ id: string }>();
+
+  return Boolean(row);
+};
+
 const getMemoDetailRow = async (
   db: D1Database,
   id: string,
@@ -2223,6 +2453,170 @@ const getMemoDetailRow = async (
 const getMemoDetail = async (db: D1Database, id: string, includeDeleted = false): Promise<MemoDetail | null> => {
   const row = await getMemoDetailRow(db, id, includeDeleted);
   return row ? mapMemoDetail(row) : null;
+};
+
+const moveMemosToNotebook = async (
+  db: D1Database,
+  memoIds: string[],
+  notebookId: string,
+  actor: { actorType: "user" | "agent"; actorId: string | null },
+  actorLabel: string
+) => {
+  const uniqueMemoIds = Array.from(new Set(memoIds));
+
+  if (uniqueMemoIds.length === 0) {
+    return 0;
+  }
+
+  const placeholders = uniqueMemoIds.map(() => "?").join(", ");
+  const rows = await db
+    .prepare(
+      `SELECT id, notebook_id
+       FROM memos
+       WHERE is_deleted = 0 AND id IN (${placeholders})`
+    )
+    .bind(...uniqueMemoIds)
+    .all<{ id: string; notebook_id: string }>();
+
+  if (rows.results.length !== uniqueMemoIds.length) {
+    throw new AppError("missing_memos", "One or more memos cannot be moved.", 400);
+  }
+
+  const now = isoNow();
+  const statements: D1PreparedStatement[] = [
+    db
+      .prepare(
+        `UPDATE memos
+         SET notebook_id = ?, updated_by = ?, updated_at = ?
+         WHERE is_deleted = 0 AND id IN (${placeholders})`
+      )
+      .bind(notebookId, actorLabel, now, ...uniqueMemoIds),
+  ];
+
+  for (const row of rows.results) {
+    statements.push(
+      auditStatement(db, actor.actorType, actor.actorId, "memo.move", "memo", row.id, {
+        fromNotebookId: row.notebook_id,
+        toNotebookId: notebookId,
+      })
+    );
+  }
+
+  await db.batch(statements);
+  return uniqueMemoIds.length;
+};
+
+const mergeMemosRecord = async (
+  db: D1Database,
+  input: { memoIds: string[]; notebookId?: string; title?: string },
+  actor: { actorType: "user" | "agent"; actorId: string | null },
+  actorLabel: string
+) => {
+  const uniqueMemoIds = Array.from(new Set(input.memoIds));
+
+  if (uniqueMemoIds.length < 2) {
+    throw new AppError("bad_request", "At least two memos are required to merge.", 400);
+  }
+
+  const placeholders = uniqueMemoIds.map(() => "?").join(", ");
+  const rows = await db
+    .prepare(
+      `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
+              m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, c.revision,
+              c.content_json, c.content_markdown, c.content_text, c.content_hash,
+              m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
+       FROM memos m
+       INNER JOIN memo_contents c ON c.memo_id = m.id
+       WHERE m.is_deleted = 0 AND m.id IN (${placeholders})`
+    )
+    .bind(...uniqueMemoIds)
+    .all<MemoDetailRow>();
+
+  if (rows.results.length !== uniqueMemoIds.length) {
+    throw new AppError("missing_memos", "One or more memos cannot be merged.", 400);
+  }
+
+  if (input.notebookId && !(await getNotebook(db, input.notebookId))) {
+    throw new AppError("not_found", "Target notebook not found", 404);
+  }
+
+  const ordered = uniqueMemoIds
+    .map((memoId) => rows.results.find((row) => row.id === memoId))
+    .filter((row): row is MemoDetailRow => Boolean(row));
+  const notebookId = input.notebookId ?? ordered[0].notebook_id;
+  const title = input.title || `合并笔记 ${new Date().toLocaleDateString("zh-CN")}`;
+  const mergedMarkdown = ordered.map((memo) => memo.content_markdown).join("\n\n---\n\n");
+  const contentJson = markdownToDoc(mergedMarkdown);
+  const contentText = docToText(contentJson);
+  const tags = Array.from(new Set(ordered.flatMap((memo) => parseJsonArray(memo.tags_json))));
+  const excerpt = createExcerpt(contentText || title);
+  const contentHash = await sha256(mergedMarkdown + JSON.stringify(contentJson));
+  const newMemoId = createId("memo");
+  const now = isoNow();
+
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO memos (
+          id, notebook_id, title, excerpt, tags_json, source_memo_ids, merge_source_count,
+          created_by, updated_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        newMemoId,
+        notebookId,
+        title,
+        excerpt,
+        JSON.stringify(tags),
+        JSON.stringify(uniqueMemoIds),
+        uniqueMemoIds.length,
+        actorLabel,
+        actorLabel,
+        now,
+        now
+      ),
+    db
+      .prepare(
+        `INSERT INTO memo_contents (
+          memo_id, content_json, content_markdown, content_text, content_hash, revision, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 0, ?, ?)`
+      )
+      .bind(newMemoId, JSON.stringify(contentJson), mergedMarkdown, contentText, contentHash, now, now),
+    db
+      .prepare(
+        `INSERT INTO memos_fts (memo_id, title, content_text, tags)
+         VALUES (?, ?, ?, ?)`
+      )
+      .bind(newMemoId, title, contentText, tags.join(" ")),
+    db
+      .prepare(
+        `UPDATE memos
+         SET is_deleted = 1, deleted_at = ?, merged_into_memo_id = ?, merged_at = ?, updated_at = ?
+         WHERE id IN (${placeholders})`
+      )
+      .bind(now, newMemoId, now, now, ...uniqueMemoIds),
+    db.prepare(`DELETE FROM memos_fts WHERE memo_id IN (${placeholders})`).bind(...uniqueMemoIds),
+    db
+      .prepare(
+        `UPDATE resources
+         SET original_memo_id = COALESCE(original_memo_id, memo_id),
+             memo_id = ?,
+             updated_at = ?
+         WHERE memo_id IN (${placeholders})`
+      )
+      .bind(newMemoId, now, ...uniqueMemoIds),
+    auditStatement(db, actor.actorType, actor.actorId, "memo.merge", "memo", newMemoId, {
+      sourceMemoIds: uniqueMemoIds,
+    }),
+  ]);
+
+  const memo = await getMemoDetail(db, newMemoId);
+
+  if (!memo) {
+    throw new AppError("not_found", "Merged memo not found after create.", 404);
+  }
+
+  return memo;
 };
 
 const createMemoRecord = async (
@@ -2627,6 +3021,17 @@ const badRequest = (c: Context, message: string) =>
       },
     },
     400
+  );
+
+const apiError = (c: Context, code: string, message: string, status: number) =>
+  c.json(
+    {
+      error: {
+        code,
+        message,
+      },
+    },
+    status as 400
   );
 
 const conflict = (c: Context, code: string, message: string) =>
