@@ -1,4 +1,13 @@
-import type { AuthSession, MemoDetail, MemoSummary, Notebook, Resource, TiptapDoc } from "@edgeever/shared";
+import type {
+  AuthSession,
+  MemoDetail,
+  MemoSummary,
+  Notebook,
+  Resource,
+  ResourceListItem,
+  ResourceStorageSummary,
+  TiptapDoc,
+} from "@edgeever/shared";
 
 type ListNotebooksResponse = {
   notebooks: Notebook[];
@@ -6,6 +15,11 @@ type ListNotebooksResponse = {
 
 type ListMemosResponse = {
   memos: MemoSummary[];
+};
+
+type ListResourcesResponse = {
+  resources: ResourceListItem[];
+  summary: ResourceStorageSummary;
 };
 
 type MemoResponse = {
@@ -107,6 +121,8 @@ export const api = {
     }),
 
   getMemo: (memoId: string) => request<MemoResponse>(`/api/v1/memos/${memoId}`),
+
+  listResources: () => request<ListResourcesResponse>("/api/v1/resources"),
 
   uploadMemoResource: (memoId: string, file: File) => {
     const form = new FormData();

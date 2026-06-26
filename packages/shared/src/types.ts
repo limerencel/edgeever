@@ -52,6 +52,19 @@ export type Resource = {
   url: string;
 };
 
+export type ResourceListItem = Resource & {
+  memoTitle: string | null;
+  memoExcerpt: string | null;
+  memoDeleted: boolean;
+};
+
+export type ResourceStorageSummary = {
+  totalCount: number;
+  totalBytes: number;
+  imageCount: number;
+  attachmentCount: number;
+};
+
 export type AuthUser = {
   id: string;
   username: string;

@@ -15,6 +15,8 @@ import {
   type MemoSummary,
   type Notebook,
   type Resource,
+  type ResourceListItem,
+  type ResourceStorageSummary,
   type TiptapDoc,
 } from "@edgeever/shared";
 import { zValidator } from "@hono/zod-validator";
@@ -115,6 +117,19 @@ type ResourceRow = {
   height: number | null;
   created_at: string;
   updated_at: string;
+};
+
+type ResourceListRow = ResourceRow & {
+  memo_title: string | null;
+  memo_excerpt: string | null;
+  memo_is_deleted: number | null;
+};
+
+type ResourceStatsRow = {
+  total_count: number;
+  total_bytes: number;
+  image_count: number;
+  attachment_count: number;
 };
 
 type AppContext = Context<{ Bindings: Bindings; Variables: { auth: AuthContext } }>;
@@ -424,6 +439,38 @@ app.get("/api/v1/memos/:id", async (c) => {
   }
 
   return c.json({ memo });
+});
+
+app.get("/api/v1/resources", async (c) => {
+  const limit = clampNumber(Number(c.req.query("limit") ?? 500), 1, 500);
+  const [rows, stats] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT r.id, r.memo_id, r.original_memo_id, r.bucket_name, r.object_key, r.kind,
+              r.mime_type, r.filename, r.byte_size, r.sha256, r.width, r.height,
+              r.created_at, r.updated_at, m.title AS memo_title, m.excerpt AS memo_excerpt,
+              m.is_deleted AS memo_is_deleted
+       FROM resources r
+       LEFT JOIN memos m ON m.id = r.memo_id
+       WHERE r.is_deleted = 0
+       ORDER BY r.created_at DESC
+       LIMIT ?`
+    )
+      .bind(limit)
+      .all<ResourceListRow>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS total_count,
+              COALESCE(SUM(byte_size), 0) AS total_bytes,
+              COALESCE(SUM(CASE WHEN kind = 'image' THEN 1 ELSE 0 END), 0) AS image_count,
+              COALESCE(SUM(CASE WHEN kind = 'attachment' THEN 1 ELSE 0 END), 0) AS attachment_count
+       FROM resources
+       WHERE is_deleted = 0`
+    ).first<ResourceStatsRow>(),
+  ]);
+
+  return c.json({
+    resources: rows.results.map(mapResourceListItem),
+    summary: mapResourceStorageSummary(stats),
+  });
 });
 
 app.post("/api/v1/memos/:id/resources", async (c) => {
@@ -1123,6 +1170,20 @@ const mapResource = (row: ResourceRow): Resource => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   url: `/api/v1/resources/${row.id}/blob`,
+});
+
+const mapResourceListItem = (row: ResourceListRow): ResourceListItem => ({
+  ...mapResource(row),
+  memoTitle: row.memo_title,
+  memoExcerpt: row.memo_excerpt,
+  memoDeleted: Boolean(row.memo_is_deleted),
+});
+
+const mapResourceStorageSummary = (row: ResourceStatsRow | null): ResourceStorageSummary => ({
+  totalCount: row?.total_count ?? 0,
+  totalBytes: row?.total_bytes ?? 0,
+  imageCount: row?.image_count ?? 0,
+  attachmentCount: row?.attachment_count ?? 0,
 });
 
 const getNotebook = async (db: D1Database, id: string): Promise<Notebook | null> => {

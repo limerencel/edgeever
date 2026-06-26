@@ -9,8 +9,12 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
+  File as FileIcon,
   FilePlus2,
   Folder,
+  HardDrive,
+  ImageIcon,
   Inbox,
   LayoutList,
   LockKeyhole,
@@ -24,6 +28,7 @@ import {
   Sparkles,
   Tags,
   Trash2,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { api } from "@/lib/api";
@@ -121,6 +126,7 @@ const WorkspaceApp = ({
   const [selectedMemoIds, setSelectedMemoIds] = useState<Set<string>>(new Set());
   const [multiSelectKeyDown, setMultiSelectKeyDown] = useState(false);
   const [imageCompressionEnabled, setImageCompressionEnabled] = useState(readImageCompressionPreference);
+  const [assetsOpen, setAssetsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const notebooksQuery = useQuery({
@@ -290,6 +296,7 @@ const WorkspaceApp = ({
             isLoggingOut={isLoggingOut}
             imageCompressionEnabled={imageCompressionEnabled}
             onImageCompressionChange={setImageCompressionEnabled}
+            onOpenAssets={() => setAssetsOpen(true)}
           />
         </aside>
 
@@ -343,6 +350,7 @@ const WorkspaceApp = ({
         </section>
       </main>
       </div>
+      {assetsOpen ? <AssetsDialog onClose={() => setAssetsOpen(false)} /> : null}
     </div>
   );
 };
@@ -465,6 +473,7 @@ const NotebookPane = ({
   isLoggingOut,
   imageCompressionEnabled,
   onImageCompressionChange,
+  onOpenAssets,
 }: {
   authRequired: boolean;
   user: AuthUser | null;
@@ -478,6 +487,7 @@ const NotebookPane = ({
   isLoggingOut: boolean;
   imageCompressionEnabled: boolean;
   onImageCompressionChange: (enabled: boolean) => void;
+  onOpenAssets: () => void;
 }) => {
   const tree = useMemo(() => buildNotebookTree(notebooks), [notebooks]);
 
@@ -538,7 +548,7 @@ const NotebookPane = ({
           <Button size="icon" variant="ghost" title="标签">
             <Tags className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" title="资产">
+          <Button size="icon" variant="ghost" title="资产" onClick={onOpenAssets}>
             <Archive className="h-4 w-4" />
           </Button>
           <Button size="icon" variant="ghost" title="设置">
@@ -861,6 +871,99 @@ const getImageFilesFromDataTransfer = (dataTransfer: DataTransfer | null) => {
   return files.filter((file) => SUPPORTED_PASTE_IMAGE_TYPES.has(file.type));
 };
 
+const AssetsDialog = ({ onClose }: { onClose: () => void }) => {
+  const resourcesQuery = useQuery({
+    queryKey: ["resources"],
+    queryFn: () => api.listResources(),
+  });
+  const resources = resourcesQuery.data?.resources ?? [];
+  const summary = resourcesQuery.data?.summary ?? {
+    totalCount: 0,
+    totalBytes: 0,
+    imageCount: 0,
+    attachmentCount: 0,
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/35 p-0 sm:items-center sm:justify-center sm:p-6">
+      <section className="flex max-h-[88dvh] w-full flex-col rounded-t-md bg-white shadow-panel sm:max-w-[760px] sm:rounded-md">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-emerald-100 px-4 py-3 sm:px-5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-base font-semibold text-slate-950">
+              <Archive className="h-4 w-4 text-emerald-700" />
+              附件
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1">
+                <HardDrive className="h-3.5 w-3.5" />
+                {formatBytes(summary.totalBytes)}
+              </span>
+              <span>{summary.totalCount} files</span>
+              <span>{summary.imageCount} images</span>
+            </div>
+          </div>
+          <Button size="icon" variant="ghost" title="关闭" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+          {resourcesQuery.isLoading ? (
+            <div className="px-2 py-8 text-center text-sm text-slate-500">加载中</div>
+          ) : resources.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+              暂无附件
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {resources.map((resource) => (
+                <a
+                  key={resource.id}
+                  className="flex min-h-16 items-center gap-3 rounded-md border border-emerald-100 bg-emerald-50/30 px-3 py-2 text-left transition hover:border-emerald-200 hover:bg-emerald-50"
+                  href={resource.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-emerald-100 bg-white text-emerald-700">
+                    {resource.kind === "image" ? <ImageIcon className="h-5 w-5" /> : <FileIcon className="h-5 w-5" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-slate-950">
+                      {resource.filename || resource.id}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-slate-500">
+                      {formatBytes(resource.byteSize)} · {resource.mimeType ?? resource.kind} ·{" "}
+                      {formatDateTime(resource.createdAt)}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-slate-400">
+                      {resource.memoDeleted
+                        ? "已删除笔记"
+                        : resource.memoTitle || resource.memoExcerpt || resource.memoId}
+                    </span>
+                  </span>
+                  <ExternalLink className="h-4 w-4 shrink-0 text-slate-400" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};
+
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** exponent;
+
+  return `${exponent === 0 ? value.toFixed(0) : value.toFixed(value >= 10 ? 1 : 2)} ${units[exponent]}`;
+};
+
 const EditorPane = ({
   memo,
   notebooks,
@@ -878,6 +981,7 @@ const EditorPane = ({
   onSaved: (memo: MemoDetail) => Promise<void>;
   onDeleted: (memoId: string) => Promise<void>;
 }) => {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [tagsText, setTagsText] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -906,6 +1010,7 @@ const EditorPane = ({
 
           setImageUploadState("uploading");
           const { resource } = await api.uploadMemoResource(targetMemoId, uploadFile);
+          void queryClient.invalidateQueries({ queryKey: ["resources"] });
 
           if (memoRef.current?.id !== targetMemoId || !editorRef.current) {
             setImageUploadState("idle");
@@ -929,7 +1034,7 @@ const EditorPane = ({
         window.setTimeout(() => setImageUploadState("idle"), 2200);
       }
     })();
-  }, []);
+  }, [queryClient]);
   const editor = useEditor({
     extensions: [
       StarterKit,
