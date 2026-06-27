@@ -1057,6 +1057,32 @@ app.patch("/api/v1/memos/:id", zValidator("json", MemoUpdateSchema), async (c) =
     );
   }
 
+  const isPinned = input.isPinned ?? Boolean(current.is_pinned);
+  const hasContentUpdate =
+    input.notebookId !== undefined ||
+    input.title !== undefined ||
+    input.contentJson !== undefined ||
+    input.contentMarkdown !== undefined ||
+    input.tags !== undefined;
+  const now = isoNow();
+
+  if (!hasContentUpdate) {
+    if (input.isPinned === undefined || isPinned === Boolean(current.is_pinned)) {
+      return c.json({ memo: await getMemoDetail(c.env.DB, id) });
+    }
+
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE memos
+         SET is_pinned = ?, updated_by = ?, updated_at = ?
+         WHERE id = ? AND is_deleted = 0`
+      ).bind(isPinned ? 1 : 0, actorLabel, now, id),
+      auditStatement(c.env.DB, actor.actorType, actor.actorId, isPinned ? "memo.pin" : "memo.unpin", "memo", id, {}),
+    ]);
+
+    return c.json({ memo: await getMemoDetail(c.env.DB, id) });
+  }
+
   const currentContentJson = JSON.parse(current.content_json) as TiptapDoc;
   const contentJson = input.contentJson
     ? (input.contentJson as TiptapDoc)
@@ -1073,7 +1099,6 @@ app.patch("/api/v1/memos/:id", zValidator("json", MemoUpdateSchema), async (c) =
   const notebookId = input.notebookId ?? current.notebook_id;
   const nextRevision = current.revision + 1;
   const contentHash = await sha256(contentMarkdown + JSON.stringify(contentJson));
-  const now = isoNow();
   const revisionStatements = (await shouldSnapshotMemoRevision(c.env.DB, current, title, JSON.stringify(tags), contentHash, now))
     ? [createMemoRevisionStatement(c.env.DB, current, actorLabel, now)]
     : [];
@@ -1082,9 +1107,9 @@ app.patch("/api/v1/memos/:id", zValidator("json", MemoUpdateSchema), async (c) =
     ...revisionStatements,
     c.env.DB.prepare(
       `UPDATE memos
-       SET notebook_id = ?, title = ?, excerpt = ?, tags_json = ?, updated_by = ?, updated_at = ?
+       SET notebook_id = ?, title = ?, excerpt = ?, tags_json = ?, is_pinned = ?, updated_by = ?, updated_at = ?
        WHERE id = ? AND is_deleted = 0`
-    ).bind(notebookId, title, excerpt, JSON.stringify(tags), actorLabel, now, id),
+    ).bind(notebookId, title, excerpt, JSON.stringify(tags), isPinned ? 1 : 0, actorLabel, now, id),
     c.env.DB.prepare(
       `UPDATE memo_contents
        SET content_json = ?, content_markdown = ?, content_text = ?, content_hash = ?,
@@ -1463,7 +1488,7 @@ const MCP_TOOLS = [
   },
   {
     name: "update_memo",
-    description: "Update memo title, Markdown, tags, or notebook.",
+    description: "Update memo title, Markdown, tags, notebook, or pinned state.",
     inputSchema: {
       type: "object",
       required: ["memoId"],
@@ -1471,6 +1496,7 @@ const MCP_TOOLS = [
       properties: {
         memoId: { type: "string" },
         title: { type: "string" },
+        isPinned: { type: "boolean" },
         contentMarkdown: { type: "string" },
         tags: { type: "array", items: { type: "string" } },
         notebookId: { type: "string" },
@@ -1596,6 +1622,7 @@ const callMcpTool = async (
               : undefined,
           notebookId: getOptionalString(args.notebookId) ?? undefined,
           title: getOptionalString(args.title) ?? undefined,
+          isPinned: typeof args.isPinned === "boolean" ? args.isPinned : undefined,
           contentMarkdown: getOptionalString(args.contentMarkdown) ?? undefined,
           tags: Array.isArray(args.tags) ? getOptionalStringArray(args.tags) : undefined,
         },
@@ -2787,6 +2814,7 @@ const updateMemoRecord = async (
     expectedRevision?: number;
     notebookId?: string;
     title?: string;
+    isPinned?: boolean;
     contentMarkdown?: string;
     tags?: string[];
   },
@@ -2803,6 +2831,45 @@ const updateMemoRecord = async (
     return { error: "revision_conflict", message: "Memo was updated elsewhere. Reload before saving." };
   }
 
+  const isPinned = input.isPinned ?? Boolean(current.is_pinned);
+  const hasContentUpdate =
+    input.notebookId !== undefined ||
+    input.title !== undefined ||
+    input.contentMarkdown !== undefined ||
+    input.tags !== undefined;
+  const now = isoNow();
+
+  if (!hasContentUpdate) {
+    if (input.isPinned === undefined || isPinned === Boolean(current.is_pinned)) {
+      const memo = await getMemoDetail(db, id);
+
+      if (!memo) {
+        return { error: "not_found", message: "Memo not found after update" };
+      }
+
+      return { memo };
+    }
+
+    await db.batch([
+      db
+        .prepare(
+          `UPDATE memos
+           SET is_pinned = ?, updated_by = ?, updated_at = ?
+           WHERE id = ? AND is_deleted = 0`
+        )
+        .bind(isPinned ? 1 : 0, actorLabel, now, id),
+      auditStatement(db, actor.actorType, actor.actorId, isPinned ? "memo.pin" : "memo.unpin", "memo", id, {}),
+    ]);
+
+    const memo = await getMemoDetail(db, id);
+
+    if (!memo) {
+      return { error: "not_found", message: "Memo not found after update" };
+    }
+
+    return { memo };
+  }
+
   const currentContentJson = parseDoc(current.content_json);
   const contentJson = input.contentMarkdown !== undefined ? markdownToDoc(input.contentMarkdown) : currentContentJson;
   const contentMarkdown =
@@ -2815,7 +2882,6 @@ const updateMemoRecord = async (
   const notebookId = input.notebookId ?? current.notebook_id;
   const nextRevision = current.revision + 1;
   const contentHash = await sha256(contentMarkdown + JSON.stringify(contentJson));
-  const now = isoNow();
   const revisionStatements = (await shouldSnapshotMemoRevision(db, current, title, JSON.stringify(tags), contentHash, now))
     ? [createMemoRevisionStatement(db, current, actorLabel, now)]
     : [];
@@ -2825,10 +2891,10 @@ const updateMemoRecord = async (
     db
       .prepare(
         `UPDATE memos
-         SET notebook_id = ?, title = ?, excerpt = ?, tags_json = ?, updated_by = ?, updated_at = ?
+         SET notebook_id = ?, title = ?, excerpt = ?, tags_json = ?, is_pinned = ?, updated_by = ?, updated_at = ?
          WHERE id = ? AND is_deleted = 0`
       )
-      .bind(notebookId, title, excerpt, JSON.stringify(tags), actorLabel, now, id),
+      .bind(notebookId, title, excerpt, JSON.stringify(tags), isPinned ? 1 : 0, actorLabel, now, id),
     db
       .prepare(
         `UPDATE memo_contents

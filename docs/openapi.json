@@ -1185,6 +1185,9 @@
             "type": "string",
             "maxLength": 160
           },
+          "isPinned": {
+            "type": "boolean"
+          },
           "contentJson": {
             "$ref": "#/components/schemas/TiptapDoc"
           },

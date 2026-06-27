@@ -524,6 +524,50 @@ const WorkspaceApp = ({
     },
   });
 
+  const pinMemosMutation = useMutation({
+    mutationFn: async ({ memoIds, isPinned }: { memoIds: string[]; isPinned: boolean }) =>
+      Promise.all(memoIds.map((memoId) => api.updateMemo(memoId, { isPinned }))),
+    onMutate: async ({ memoIds, isPinned }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ["memos"] }),
+        queryClient.cancelQueries({ queryKey: ["memo"] }),
+      ]);
+
+      const memoIdSet = new Set(memoIds);
+      const previousMemoQueries = queryClient.getQueriesData<{ memos: MemoSummary[] }>({ queryKey: ["memos"] });
+      const previousMemoDetailQueries = queryClient.getQueriesData<{ memo: MemoDetail }>({ queryKey: ["memo"] });
+
+      queryClient.setQueriesData<{ memos: MemoSummary[] }>({ queryKey: ["memos"] }, (current) =>
+        current
+          ? {
+              memos: current.memos.map((memo) => (memoIdSet.has(memo.id) ? { ...memo, isPinned } : memo)),
+            }
+          : current
+      );
+      queryClient.setQueriesData<{ memo: MemoDetail }>({ queryKey: ["memo"] }, (current) =>
+        current && memoIdSet.has(current.memo.id)
+          ? {
+              memo: { ...current.memo, isPinned },
+            }
+          : current
+      );
+
+      return { previousMemoQueries, previousMemoDetailQueries };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previousMemoQueries.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      context?.previousMemoDetailQueries.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["memos"] });
+      await queryClient.invalidateQueries({ queryKey: ["memo"] });
+    },
+  });
+
   const deleteMemosMutation = useMutation({
     mutationFn: api.deleteMemos,
     onSuccess: async (_, variables) => {
@@ -670,6 +714,33 @@ const WorkspaceApp = ({
       memoIds: [memoId],
       notebookId: targetNotebookId,
     });
+  };
+
+  const handleToggleMemoPinned = (memo: MemoSummary) => {
+    if (memoView === "trash") {
+      return;
+    }
+
+    pinMemosMutation.mutate({
+      memoIds: [memo.id],
+      isPinned: !memo.isPinned,
+    });
+  };
+
+  const handlePinSelectedMemos = (isPinned: boolean) => {
+    if (selectedMemoIds.size === 0 || memoView === "trash") {
+      return;
+    }
+
+    pinMemosMutation.mutate(
+      {
+        memoIds: Array.from(selectedMemoIds),
+        isPinned,
+      },
+      {
+        onSuccess: clearMemoSelection,
+      }
+    );
   };
 
   const handleMerge = () => {
@@ -901,6 +972,7 @@ const WorkspaceApp = ({
               isCreating={createMemoMutation.isPending}
               isMerging={mergeMutation.isPending}
               isMoving={moveMemosMutation.isPending}
+              isPinning={pinMemosMutation.isPending}
               isDeleting={deleteMemosMutation.isPending || deleteMemoMutation.isPending}
               isOnline={isOnline}
               isSyncingQueuedChanges={isSyncingQueuedChanges}
@@ -948,6 +1020,8 @@ const WorkspaceApp = ({
               onDeleteMemo={handleDeleteMemoFromList}
               onRestoreMemo={handleRestoreMemoFromList}
               onMoveMemo={handleMoveMemoFromList}
+              onTogglePinMemo={handleToggleMemoPinned}
+              onPinSelectedMemos={handlePinSelectedMemos}
               onDeleteSelectedMemos={handleDeleteSelectedMemos}
               onMoveSelectedMemos={handleMoveSelectedMemos}
               onSyncQueuedChanges={() => void runQueuedSync()}
@@ -2286,25 +2360,33 @@ const MobileNotebookSelectSheet = ({
 
 const MobileSelectionMoreSheet = ({
   canMerge,
+  canPin,
   canToggleVisibleSelection,
   mergeTitle,
+  pinLabel,
+  pinTitle,
   selectedCount,
   selectionToggleLabel,
   selectionToggleTitle,
   onClearSelection,
   onClose,
   onMerge,
+  onPin,
   onToggleVisibleSelection,
 }: {
   canMerge: boolean;
+  canPin: boolean;
   canToggleVisibleSelection: boolean;
   mergeTitle: string;
+  pinLabel: string;
+  pinTitle: string;
   selectedCount: number;
   selectionToggleLabel: string;
   selectionToggleTitle: string;
   onClearSelection: () => void;
   onClose: () => void;
   onMerge: () => void;
+  onPin: () => void;
   onToggleVisibleSelection: () => void;
 }) => (
   <div className="fixed inset-0 z-50 bg-slate-950/25 px-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:hidden" onClick={onClose}>
@@ -2341,6 +2423,16 @@ const MobileSelectionMoreSheet = ({
       >
         <Merge className="h-4 w-4" />
         合并笔记
+      </button>
+      <button
+        className="flex h-12 w-full items-center gap-3 border-b border-slate-100 px-4 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-100 disabled:hover:bg-transparent"
+        type="button"
+        disabled={!canPin}
+        title={pinTitle}
+        onClick={onPin}
+      >
+        <Star className="h-4 w-4" />
+        {pinLabel}
       </button>
       <button
         className="flex h-12 w-full items-center gap-3 px-4 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50"
@@ -2515,6 +2607,7 @@ const MemoListPane = ({
   isCreating,
   isMerging,
   isMoving,
+  isPinning,
   isDeleting,
   isOnline,
   isSyncingQueuedChanges,
@@ -2537,6 +2630,8 @@ const MemoListPane = ({
   onDeleteMemo,
   onRestoreMemo,
   onMoveMemo,
+  onTogglePinMemo,
+  onPinSelectedMemos,
   onDeleteSelectedMemos,
   onMoveSelectedMemos,
   onSyncQueuedChanges,
@@ -2556,6 +2651,7 @@ const MemoListPane = ({
   isCreating: boolean;
   isMerging: boolean;
   isMoving: boolean;
+  isPinning: boolean;
   isDeleting: boolean;
   isOnline: boolean;
   isSyncingQueuedChanges: boolean;
@@ -2578,6 +2674,8 @@ const MemoListPane = ({
   onDeleteMemo: (memoId: string) => void;
   onRestoreMemo: (memoId: string) => void;
   onMoveMemo: (memoId: string, targetNotebookId: string) => void;
+  onTogglePinMemo: (memo: MemoSummary) => void;
+  onPinSelectedMemos: (isPinned: boolean) => void;
   onDeleteSelectedMemos: () => void;
   onMoveSelectedMemos: (notebookId: string) => void;
   onSyncQueuedChanges: () => void;
@@ -2598,10 +2696,11 @@ const MemoListPane = ({
   const filterOptions = MEMO_FILTER_OPTIONS;
   const mobileFilterOptions = useMemo(() => filterOptions.filter((option) => option.value !== "all"), [filterOptions]);
   const filteredMemos = useMemo(() => filterMemos(memos, filterMode), [filterMode, memos]);
-  const sortedMemos = useMemo(() => sortMemos(filteredMemos, sortMode), [filteredMemos, sortMode]);
+  const sortedMemos = useMemo(() => sortMemos(filteredMemos, sortMode, view !== "trash"), [filteredMemos, sortMode, view]);
   const visibleMemoIds = useMemo(() => sortedMemos.map((memo) => memo.id), [sortedMemos]);
   const memoGroups = useMemo(() => groupMemos(sortedMemos, sortMode), [sortedMemos, sortMode]);
   const moveNotebookOptions = useMemo(() => getNotebookMoveOptions(notebooks), [notebooks]);
+  const selectedMemosInList = useMemo(() => memos.filter((memo) => selectedMemoIds.has(memo.id)), [memos, selectedMemoIds]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   const canEnterSelectionMode = visibleMemoIds.length > 0;
@@ -2633,6 +2732,17 @@ const MemoListPane = ({
     selectedMemoIds.size === 0 ? "请选择笔记" : isDeleting ? "正在删除" : view === "trash" ? "永久删除" : "删除";
   const selectionMergeTitle =
     selectedMemoIds.size < 2 ? "至少选择 2 条笔记" : view === "trash" ? "回收站内不可合并" : isMerging ? "正在合并" : "合并笔记";
+  const allSelectedMemosPinned = selectedMemosInList.length > 0 && selectedMemosInList.every((memo) => memo.isPinned);
+  const selectedPinTarget = !allSelectedMemosPinned;
+  const selectionPinLabel = allSelectedMemosPinned ? "取消置顶" : "置顶";
+  const selectionPinTitle =
+    selectedMemoIds.size === 0
+      ? "请选择笔记"
+      : view === "trash"
+        ? "回收站内不可置顶"
+        : isPinning
+          ? "正在更新置顶"
+          : selectionPinLabel;
   const selectionToggleTitle = canToggleVisibleMemoSelection ? visibleSelectionToggleLabel : "当前列表没有可选择的笔记";
   const moveTargetTitle =
     view === "trash" ? "回收站内不可移动" : notebooks.length === 0 ? "没有可移动的笔记本" : isMoving ? "正在移动" : "移动到笔记本";
@@ -2664,6 +2774,26 @@ const MemoListPane = ({
       setFilterMode("all");
     }
   }, [filterMode, filterOptions]);
+
+  useEffect(() => {
+    if (!selectionMode || selectedMemoIds.size === 0) {
+      return;
+    }
+
+    const visibleMemoIdSet = new Set(visibleMemoIds);
+    const nextSelectedMemoIds = Array.from(selectedMemoIds).filter((memoId) => visibleMemoIdSet.has(memoId));
+
+    if (nextSelectedMemoIds.length === selectedMemoIds.size) {
+      return;
+    }
+
+    if (nextSelectedMemoIds.length === 0) {
+      onClearSelection();
+      return;
+    }
+
+    onReplaceSelection(nextSelectedMemoIds);
+  }, [onClearSelection, onReplaceSelection, selectedMemoIds, selectionMode, visibleMemoIds]);
 
   useEffect(() => {
     if (!selectedMemoId || !visibleMemoIds.includes(selectedMemoId) || !window.matchMedia("(min-width: 1024px)").matches) {
@@ -2756,14 +2886,29 @@ const MemoListPane = ({
   };
 
   const handleClearSearch = () => {
+    onClearSelection();
     onSearch("");
     searchInputRef.current?.focus();
   };
 
+  const handleSearchChange = (value: string) => {
+    if (value !== search) {
+      onClearSelection();
+    }
+
+    onSearch(value);
+  };
+
   const handleResetListConstraints = () => {
+    onClearSelection();
     setFilterMode("all");
     onSearch("");
     searchInputRef.current?.focus();
+  };
+
+  const handleFilterModeChange = (value: MemoFilterMode) => {
+    onClearSelection();
+    setFilterMode(value);
   };
 
   const handleListDensityChange = (value: MemoListDensity) => {
@@ -2954,7 +3099,7 @@ const MemoListPane = ({
                       className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 transition hover:bg-slate-50"
                       type="button"
                       onClick={() => {
-                        setFilterMode(option.value);
+                        handleFilterModeChange(option.value);
                         setDesktopFilterOpen(false);
                       }}
                     >
@@ -3109,7 +3254,7 @@ const MemoListPane = ({
             <input
               ref={searchInputRef}
               value={search}
-              onChange={(event) => onSearch(event.target.value)}
+              onChange={(event) => handleSearchChange(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Escape" && search) {
                   event.preventDefault();
@@ -3146,7 +3291,7 @@ const MemoListPane = ({
                 title={filterMode === option.value ? `取消${option.label}` : option.label}
                 aria-label={filterMode === option.value ? `取消${option.label}` : option.label}
                 aria-pressed={filterMode === option.value}
-                onClick={() => setFilterMode(filterMode === option.value ? "all" : option.value)}
+                onClick={() => handleFilterModeChange(filterMode === option.value ? "all" : option.value)}
               >
                 {getMobileFilterIcon(option.value)}
               </button>
@@ -3190,6 +3335,16 @@ const MemoListPane = ({
               <Button size="sm" variant="ghost" title="取消选择" onClick={onClearSelection}>
                 <X className="h-4 w-4" />
                 取消
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                title={selectionPinTitle}
+                onClick={() => onPinSelectedMemos(selectedPinTarget)}
+                disabled={selectedMemoIds.size === 0 || isPinning || view === "trash"}
+              >
+                <Star className="h-4 w-4" />
+                {selectionPinLabel}
               </Button>
               <select
                 className="h-8 max-w-40 rounded-md border border-emerald-100 bg-emerald-50/70 px-2 text-xs text-emerald-900 outline-none disabled:opacity-50"
@@ -3322,6 +3477,22 @@ const MemoListPane = ({
             <CheckSquare className="h-4 w-4" />
             选择笔记
           </button>
+          {view !== "trash" ? (
+            <button
+              className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+              type="button"
+              disabled={isPinning}
+              title={isPinning ? "正在更新置顶" : memoContextMenu.memo.isPinned ? "取消置顶" : "置顶笔记"}
+              onClick={() => {
+                const { memo } = memoContextMenu;
+                setMemoContextMenu(null);
+                onTogglePinMemo(memo);
+              }}
+            >
+              <Star className={cn("h-4 w-4", memoContextMenu.memo.isPinned && "fill-current text-emerald-600")} />
+              {memoContextMenu.memo.isPinned ? "取消置顶" : "置顶笔记"}
+            </button>
+          ) : null}
           <div className="my-1 h-px bg-slate-100" />
           {view === "trash" ? (
             <>
@@ -3468,8 +3639,11 @@ const MemoListPane = ({
       {mobileMoreOpen ? (
         <MobileSelectionMoreSheet
           canMerge={selectedMemoIds.size >= 2 && view !== "trash" && !isMerging}
+          canPin={selectedMemoIds.size > 0 && view !== "trash" && !isPinning}
           canToggleVisibleSelection={canToggleVisibleMemoSelection}
           mergeTitle={selectionMergeTitle}
+          pinLabel={selectionPinLabel}
+          pinTitle={selectionPinTitle}
           selectedCount={selectedMemoIds.size}
           selectionToggleLabel={visibleSelectionToggleLabel}
           selectionToggleTitle={selectionToggleTitle}
@@ -3491,14 +3665,22 @@ const MemoListPane = ({
             setMobileMoreOpen(false);
             onMerge();
           }}
+          onPin={() => {
+            setMobileMoreOpen(false);
+            onPinSelectedMemos(selectedPinTarget);
+          }}
         />
       ) : null}
     </div>
   );
 };
 
-const sortMemos = (memos: MemoSummary[], sortMode: MemoSortMode) =>
+const sortMemos = (memos: MemoSummary[], sortMode: MemoSortMode, prioritizePinned = true) =>
   [...memos].sort((first, second) => {
+    if (prioritizePinned && first.isPinned !== second.isPinned) {
+      return first.isPinned ? -1 : 1;
+    }
+
     if (sortMode === "title-asc") {
       const titleCompare = getMemoTitle(first.title).localeCompare(getMemoTitle(second.title), "zh-CN", {
         numeric: true,
@@ -3730,6 +3912,12 @@ const MemoCard = ({
       return;
     }
 
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Some browsers may already release capture during gesture cancellation.
+    }
+
     clearLongPressTimer();
     longPressPointRef.current = { x: event.clientX, y: event.clientY };
     longPressTimerRef.current = window.setTimeout(() => {
@@ -3754,6 +3942,14 @@ const MemoCard = ({
 
   const handlePointerEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "touch") {
+      try {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      } catch {
+        // Gesture cancellation can race with pointer capture release.
+      }
+
       resetLongPress();
     }
   };
@@ -3862,8 +4058,9 @@ const MemoCard = ({
           onContextMenu={handleContextMenu}
           title="Ctrl/Cmd 点击切换选择，Shift 点击连续选择，移动端长按进入选择"
         >
-          <div className={cn("mb-2 truncate text-base font-semibold leading-6 text-slate-900 lg:text-base", listDensity === "compact" && "mb-1")}>
-            {memoTitle}
+          <div className={cn("mb-2 flex min-w-0 items-center gap-1.5 text-base font-semibold leading-6 text-slate-900 lg:text-base", listDensity === "compact" && "mb-1")}>
+            {memo.isPinned ? <Star className="h-4 w-4 shrink-0 fill-current text-emerald-600" /> : null}
+            <span className="min-w-0 truncate">{memoTitle}</span>
           </div>
           <div
             className={cn(

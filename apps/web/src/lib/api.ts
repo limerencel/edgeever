@@ -228,6 +228,7 @@ export const api = {
       expectedRevision?: number;
       notebookId?: string;
       title?: string;
+      isPinned?: boolean;
       contentJson?: TiptapDoc;
       contentMarkdown?: string;
       tags?: string[];
