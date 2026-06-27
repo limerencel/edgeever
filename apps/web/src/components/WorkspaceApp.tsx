@@ -16,9 +16,9 @@ import { Button } from "@/components/ui/button";
 import { NotebookPane } from "./NotebookPane";
 import { MemoListPane } from "./MemoListPane";
 import { EditorPane } from "./EditorPane";
-import { AssetsDialog } from "./dialogs/AssetsDialog";
+import { AssetsPane } from "./AssetsPane";
 import { TagsDialog } from "./dialogs/TagsDialog";
-import { SettingsDialog } from "./dialogs/SettingsDialog";
+import { SettingsPane } from "./SettingsPane";
 import { TemplatesDialog } from "./dialogs/TemplatesDialog";
 import { AppConfirmDialog, MemoDeleteConfirmDialog, NotebookNameDialog } from "./dialogs/ConfirmDialogs";
 import { api } from "@/lib/api";
@@ -453,9 +453,8 @@ export const WorkspaceApp = ({
   const [appNoticeDialog, setAppNoticeDialog] = useState<AppNoticeDialogState | null>(null);
   const [multiSelectKeyDown, setMultiSelectKeyDown] = useState(false);
   const [imageCompressionEnabled, setImageCompressionEnabled] = useState(readImageCompressionPreference);
-  const [assetsOpen, setAssetsOpen] = useState(false);
+  const [rightView, setRightView] = useState<"editor" | "settings" | "assets">("editor");
   const [tagsOpen, setTagsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [mobileNotebookPickerOpen, setMobileNotebookPickerOpen] = useState(false);
   const [mobileBottomNavActive, setMobileBottomNavActive] = useState<MobileBottomNavItem>("home");
@@ -515,9 +514,8 @@ export const WorkspaceApp = ({
       mobileNotebookPickerOpen ||
       mobileSearchActive ||
       templatesOpen ||
-      settingsOpen ||
+      rightView !== "editor" ||
       tagsOpen ||
-      assetsOpen ||
       memoSelectionModeActive ||
       activePane === "editor" ||
       activePane === "notebooks"
@@ -685,6 +683,7 @@ export const WorkspaceApp = ({
       setMemoView("notebook");
       await queryClient.invalidateQueries({ queryKey: ["memos"] });
       queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
+      setRightView("editor");
       setSelectedMemoId(data.memo.id);
       setActivePane("editor");
     },
@@ -696,6 +695,7 @@ export const WorkspaceApp = ({
       clearMemoSelection();
       await queryClient.invalidateQueries({ queryKey: ["memos"] });
       queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
+      setRightView("editor");
       setSelectedMemoId(data.memo.id);
       setActivePane("editor");
     },
@@ -792,6 +792,7 @@ export const WorkspaceApp = ({
       await queryClient.invalidateQueries({ queryKey: ["memos"] });
       queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
       setSelectedNotebookId(data.memo.notebookId);
+      setRightView("editor");
       setSelectedMemoId(data.memo.id);
       setActivePane("editor");
     },
@@ -1083,7 +1084,8 @@ export const WorkspaceApp = ({
 
   const handleOpenAssets = () => {
     clearHiddenMobileSearch();
-    setAssetsOpen(true);
+    setRightView("assets");
+    setActivePane("editor");
   };
 
   const handleOpenTags = () => {
@@ -1099,12 +1101,12 @@ export const WorkspaceApp = ({
 
   const handleOpenSettings = () => {
     clearHiddenMobileSearch();
-    setMobileBottomNavActive("settings");
-    setSettingsOpen(true);
+    setRightView("settings");
+    setActivePane("editor");
   };
 
   const handleCloseAssets = () => {
-    setAssetsOpen(false);
+    setRightView("editor");
     setMobileBottomNavActive("home");
   };
 
@@ -1114,7 +1116,7 @@ export const WorkspaceApp = ({
   };
 
   const handleCloseSettings = () => {
-    setSettingsOpen(false);
+    setRightView("editor");
     setMobileBottomNavActive("home");
   };
 
@@ -1160,7 +1162,7 @@ export const WorkspaceApp = ({
       return true;
     }
 
-    if (settingsOpen) {
+    if (rightView === "settings") {
       handleCloseSettings();
       return true;
     }
@@ -1170,7 +1172,7 @@ export const WorkspaceApp = ({
       return true;
     }
 
-    if (assetsOpen) {
+    if (rightView === "assets") {
       handleCloseAssets();
       return true;
     }
@@ -1189,7 +1191,7 @@ export const WorkspaceApp = ({
   }, [
     activePane,
     appNoticeDialog,
-    assetsOpen,
+    rightView,
     clearMemoSelection,
     createNotebookMutation.isPending,
     deleteMemoMutation.isPending,
@@ -1205,7 +1207,6 @@ export const WorkspaceApp = ({
     mobileSearchActive,
     notebookDeleteConfirmation,
     notebookNameDialog,
-    settingsOpen,
     tagsOpen,
     templatesOpen,
     updateNotebookMutation.isPending,
@@ -1249,12 +1250,11 @@ export const WorkspaceApp = ({
 
       const transientLayerOpen = Boolean(
         appNoticeDialog ||
-          assetsOpen ||
+          rightView !== "editor" ||
           memoDeleteConfirmation ||
           mobileNotebookPickerOpen ||
           notebookDeleteConfirmation ||
           notebookNameDialog ||
-          settingsOpen ||
           tagsOpen ||
           templatesOpen
       );
@@ -1290,7 +1290,7 @@ export const WorkspaceApp = ({
     window.addEventListener("keydown", handleWorkspaceShortcut);
     return () => window.removeEventListener("keydown", handleWorkspaceShortcut);
   }, [
-    assetsOpen,
+    rightView,
     appNoticeDialog,
     canCreateMemo,
     clearMemoSelection,
@@ -1303,7 +1303,6 @@ export const WorkspaceApp = ({
     mobileNotebookPickerOpen,
     notebookDeleteConfirmation,
     notebookNameDialog,
-    settingsOpen,
     tagsOpen,
     templatesOpen,
   ]);
@@ -1381,7 +1380,12 @@ export const WorkspaceApp = ({
     <div className="flex h-[100dvh] overflow-hidden bg-[#f6faf7] text-slate-950">
       <div className="min-w-0 flex-1">
         <main
-          className="grid h-[100dvh] min-h-0 grid-cols-[minmax(0,1fr)] lg:grid-cols-[260px_var(--memo-list-width)_minmax(0,1fr)]"
+          className={cn(
+            "grid h-[100dvh] min-h-0 grid-cols-[minmax(0,1fr)]",
+            rightView === "editor"
+              ? "lg:grid-cols-[260px_var(--memo-list-width)_minmax(0,1fr)]"
+              : "lg:grid-cols-[260px_1fr]"
+          )}
           style={{ "--memo-list-width": `${memoListWidth}px` } as CSSProperties}
         >
           <aside
@@ -1401,6 +1405,7 @@ export const WorkspaceApp = ({
                 setMemoView("notebook");
                 setSelectedNotebookId(notebookId);
                 clearMemoSelection();
+                setRightView("editor");
                 setActivePane("memos");
               }}
               onCreateMemo={handleCreateMemo}
@@ -1415,6 +1420,7 @@ export const WorkspaceApp = ({
                 }
                 setSelectedNotebookId(null);
                 clearMemoSelection();
+                setRightView("editor");
                 setActivePane("memos");
               }}
               onLogout={onLogout}
@@ -1441,8 +1447,8 @@ export const WorkspaceApp = ({
 
           <section
             className={cn(
-              "relative min-w-0 overflow-hidden border-r border-slate-200 bg-[#f8faf8] lg:block lg:bg-white/75 lg:backdrop-blur-lg",
-              activePane === "memos" ? "block" : "hidden"
+              "relative min-w-0 overflow-hidden border-r border-slate-200 bg-[#f8faf8]",
+              activePane === "memos" && rightView === "editor" ? "block lg:block lg:bg-white/75 lg:backdrop-blur-lg" : "hidden lg:hidden"
             )}
           >
             <MemoListPane
@@ -1488,6 +1494,7 @@ export const WorkspaceApp = ({
                 setActivePane("memos");
               }}
               onOpenMemo={(memoId) => {
+                setRightView("editor");
                 setSelectedMemoId(memoId);
                 setActivePane("editor");
               }}
@@ -1543,46 +1550,50 @@ export const WorkspaceApp = ({
           </section>
 
           <section className={cn("min-h-0 min-w-0 bg-white lg:block", activePane === "editor" ? "block" : "hidden")}>
-            <EditorPane
-              memo={selectedMemo}
-              isTrashView={memoView === "trash"}
-              notebooks={notebooks}
-              isLoading={memoQuery.isLoading}
-              imageCompressionEnabled={imageCompressionEnabled}
-              hasNextMemo={Boolean(nextMemoId)}
-              hasPreviousMemo={Boolean(previousMemoId)}
-              onBackToList={() => setActivePane("memos")}
-              onOpenNextMemo={() => {
-                if (nextMemoId) {
-                  setSelectedMemoId(nextMemoId);
-                }
-              }}
-              onOpenPreviousMemo={() => {
-                if (previousMemoId) {
-                  setSelectedMemoId(previousMemoId);
-                }
-              }}
-              onSaved={async (memo) => {
-                queryClient.setQueryData(["memo", memo.id], { memo });
-                await queryClient.invalidateQueries({ queryKey: ["memos"] });
-              }}
-              onDeleted={async (memoId) => {
-                deleteMemoMutation.mutate({ memoId, permanent: false });
-              }}
-              onPermanentDeleted={async (memoId) => {
-                setMemoDeleteConfirmation({ kind: "single", memoIds: [memoId], permanent: true });
-              }}
-              onRestored={async (memoId) => {
-                await restoreMemoMutation.mutateAsync(memoId);
-              }}
-            />
+            {rightView === "settings" ? (
+              <SettingsPane onClose={handleCloseSettings} />
+            ) : rightView === "assets" ? (
+              <AssetsPane onClose={handleCloseAssets} />
+            ) : (
+              <EditorPane
+                memo={selectedMemo}
+                isTrashView={memoView === "trash"}
+                notebooks={notebooks}
+                isLoading={memoQuery.isLoading}
+                imageCompressionEnabled={imageCompressionEnabled}
+                hasNextMemo={Boolean(nextMemoId)}
+                hasPreviousMemo={Boolean(previousMemoId)}
+                onBackToList={() => setActivePane("memos")}
+                onOpenNextMemo={() => {
+                  if (nextMemoId) {
+                    setSelectedMemoId(nextMemoId);
+                  }
+                }}
+                onOpenPreviousMemo={() => {
+                  if (previousMemoId) {
+                    setSelectedMemoId(previousMemoId);
+                  }
+                }}
+                onSaved={async (memo) => {
+                  queryClient.setQueryData(["memo", memo.id], { memo });
+                  await queryClient.invalidateQueries({ queryKey: ["memos"] });
+                }}
+                onDeleted={async (memoId) => {
+                  deleteMemoMutation.mutate({ memoId, permanent: false });
+                }}
+                onPermanentDeleted={async (memoId) => {
+                  setMemoDeleteConfirmation({ kind: "single", memoIds: [memoId], permanent: true });
+                }}
+                onRestored={async (memoId) => {
+                  await restoreMemoMutation.mutateAsync(memoId);
+                }}
+              />
+            )}
           </section>
         </main>
       </div>
 
-      {assetsOpen && <AssetsDialog onClose={handleCloseAssets} />}
       {tagsOpen && <TagsDialog onClose={() => setTagsOpen(false)} />}
-      {settingsOpen && <SettingsDialog onClose={handleCloseSettings} />}
       {templatesOpen && (
         <TemplatesDialog
           canCreateMemo={canCreateMemo}
