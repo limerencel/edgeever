@@ -122,7 +122,7 @@ const MobileBottomNavButton = ({
 }) => (
   <button
     className={cn(
-      "flex h-14 flex-col items-center justify-center gap-1 rounded-md text-xs font-medium transition-all duration-200",
+      "flex h-12 flex-col items-center justify-center gap-0.5 rounded-md text-xs font-medium transition-all duration-200",
       active ? "text-slate-950" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
     )}
     type="button"
@@ -151,22 +151,22 @@ const MobileBottomNav = ({
   onOpenSettings: () => void;
 }) => (
   <nav
-    className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
+    className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-5 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
     aria-label="移动端主导航"
   >
-    <div className="relative grid h-16 grid-cols-3 items-center">
+    <div className="relative grid h-14 grid-cols-3 items-center">
       <MobileBottomNavButton active={activeItem === "home"} icon={<Home className="h-5 w-5" />} label="首页" onClick={onHome} />
       <div aria-hidden="true" />
       <MobileBottomNavButton active={activeItem === "settings"} icon={<UserRound className="h-5 w-5" />} label="我的" onClick={onOpenSettings} />
       <button
-        className="absolute left-1/2 top-[-1.35rem] flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border-[6px] border-white bg-emerald-500 text-white shadow-[0_12px_26px_rgb(var(--brand-green-rgb)/0.32)] transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-200 disabled:opacity-70 disabled:hover:bg-emerald-200"
+        className="absolute left-1/2 top-[-1.05rem] flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-white bg-emerald-500 text-white shadow-[0_12px_26px_rgb(var(--brand-green-rgb)/0.32)] transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-200 disabled:opacity-70 disabled:hover:bg-emerald-200"
         type="button"
         title={!canCreateMemo ? "当前视图不可新建笔记" : isCreating ? "正在创建" : "新建笔记"}
         aria-label={!canCreateMemo ? "当前视图不可新建笔记" : isCreating ? "正在创建" : "新建笔记"}
         disabled={!canCreateMemo || isCreating}
         onClick={onCreateMemo}
       >
-        <Plus className="h-8 w-8" />
+        <Plus className="h-7 w-7" />
       </button>
     </div>
   </nav>
