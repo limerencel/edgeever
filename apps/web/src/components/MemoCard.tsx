@@ -328,14 +328,14 @@ export const MemoCard = ({
           >
             <span
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-150",
+                "flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-150 lg:h-5 lg:w-5",
                 checked
                   ? "border-slate-700 bg-slate-700 text-white shadow-[0_4px_10px_rgba(15,23,42,0.16)]"
                   : "border-slate-300 bg-white text-transparent"
               )}
               aria-hidden="true"
             >
-              <Check className="h-5 w-5 stroke-[3]" />
+              <Check className="h-3.5 w-3.5 stroke-[3]" />
             </span>
           </button>
         )}
