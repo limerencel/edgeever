@@ -1,16 +1,17 @@
 import { useRef, useState, useEffect, type DragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Star, Check, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react";
 import type { MemoSummary } from "@edgeever/shared";
 import { cn } from "@/lib/utils";
 import type { MemoListDensity } from "@/lib/app-helpers";
-import { getMemoTitle, MEMO_DRAG_MIME, setMemoDragPreview } from "@/lib/app-helpers";
+import { MEMO_DRAG_MIME, setMemoDragPreview } from "@/lib/app-helpers";
 
 const MEMO_LONG_PRESS_DELAY_MS = 520;
 const MEMO_LONG_PRESS_MOVE_TOLERANCE_PX = 14;
 
 const isDesktopViewport = () => window.matchMedia("(min-width: 1024px)").matches;
 
-const formatMemoPreviewDate = (value: string) => {
+const formatMemoPreviewDate = (value: string, locale: string, yesterdayLabel: string) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -22,14 +23,14 @@ const formatMemoPreviewDate = (value: string) => {
   const memoDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 
   if (memoDay === today) {
-    return new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" }).format(date);
+    return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date);
   }
 
   if (memoDay === today - 24 * 60 * 60 * 1000) {
-    return "昨天";
+    return yesterdayLabel;
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "numeric",
     day: "numeric",
@@ -71,14 +72,17 @@ export const MemoCard = ({
   onOpenKeyboardContextMenu: (target: HTMLElement) => void;
   onToggle: (event?: MouseEvent<HTMLElement>) => void;
 }) => {
+  const { t, i18n } = useTranslation();
   const handledModifierPointerRef = useRef(false);
   const longPressTimerRef = useRef<number | null>(null);
   const longPressPointRef = useRef<{ x: number; y: number } | null>(null);
   const [modifierHoverActive, setModifierHoverActive] = useState(false);
-  const memoTitle = getMemoTitle(memo.title);
-  const memoExcerpt = memo.excerpt.trim() || "空笔记";
+  const memoTitle = memo.title?.trim() || t("common.untitledMemo");
+  const memoExcerpt = memo.excerpt.trim() || t("memoCard.emptyMemo");
   const showSelectionControl = selectionMode || checked || multiSelectKeyDown || modifierHoverActive;
-  const selectionControlLabel = checked ? `取消选择 ${memoTitle}` : `选择 ${memoTitle}`;
+  const selectionControlLabel = checked
+    ? t("memoCard.unselect", { title: memoTitle })
+    : t("memoCard.select", { title: memoTitle });
 
   const shouldToggleSelection = (event: MouseEvent<HTMLElement>) =>
     event.ctrlKey || event.metaKey || event.shiftKey || multiSelectKeyDown;
@@ -213,7 +217,9 @@ export const MemoCard = ({
       return;
     }
 
-    const dragLabel = dragMemoIds.length > 1 ? `移动 ${dragMemoIds.length} 条笔记` : `移动「${memoTitle}」`;
+    const dragLabel = dragMemoIds.length > 1
+      ? t("memoCard.dragMany", { count: dragMemoIds.length })
+      : t("memoCard.dragOne", { title: memoTitle });
 
     resetLongPress();
     event.dataTransfer.effectAllowed = "move";
@@ -359,7 +365,7 @@ export const MemoCard = ({
           onClick={handleClick}
           onContextMenu={handleContextMenu}
           onKeyDown={handleKeyDown}
-          title="Ctrl/Cmd 点击切换选择，Shift 点击连续选择，可拖到左侧笔记本移动，移动端长按进入选择"
+          title={t("memoCard.interactionHint")}
         >
           <div className={cn("mb-2 flex min-w-0 items-center gap-1.5 text-base font-semibold leading-6 text-slate-900 lg:text-base", listDensity === "compact" && "mb-1")}>
             {memo.isPinned && <Star className="h-4 w-4 shrink-0 fill-current text-slate-500" />}
@@ -374,7 +380,9 @@ export const MemoCard = ({
             {memoExcerpt}
           </div>
           <div className={cn("mt-5 flex flex-wrap items-center gap-2", listDensity === "compact" && "mt-2")}>
-            <time className="text-xs font-medium text-slate-400 lg:text-sm lg:font-normal lg:text-slate-500">{formatMemoPreviewDate(memo.updatedAt)}</time>
+            <time className="text-xs font-medium text-slate-400 lg:text-sm lg:font-normal lg:text-slate-500">
+              {formatMemoPreviewDate(memo.updatedAt, i18n.resolvedLanguage ?? i18n.language, t("memoCard.yesterday"))}
+            </time>
             {memo.tags.slice(0, 3).map((tag) => (
               <span key={tag} className="rounded-sm bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">
                 #{tag}
@@ -393,8 +401,8 @@ export const MemoCard = ({
             <button
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-2"
               type="button"
-              title="更多操作"
-              aria-label="更多操作"
+              title={t("memoCard.moreActions")}
+              aria-label={t("memoCard.moreActions")}
               aria-haspopup="menu"
               onClick={(event) => {
                 event.stopPropagation();
@@ -409,8 +417,8 @@ export const MemoCard = ({
                 isTrashView ? "hover:bg-slate-100 hover:text-slate-800" : "hover:bg-rose-50 hover:text-rose-700"
               )}
               type="button"
-              title={isTrashView ? "恢复笔记" : "删除笔记"}
-              aria-label={isTrashView ? "恢复笔记" : "删除笔记"}
+              title={isTrashView ? t("memoCard.restoreMemo") : t("memoCard.deleteMemo")}
+              aria-label={isTrashView ? t("memoCard.restoreMemo") : t("memoCard.deleteMemo")}
               onClick={(event) => {
                 event.stopPropagation();
                 if (isTrashView) {

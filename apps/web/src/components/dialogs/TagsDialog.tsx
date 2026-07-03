@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tags, X, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { AppConfirmDialog } from "./ConfirmDialogs";
 import type { TagSummary } from "@edgeever/shared";
 
 export const TagsDialog = ({ onClose }: { onClose: () => void }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [editingTagName, setEditingTagName] = useState<string | null>(null);
   const [editingTagValue, setEditingTagValue] = useState("");
@@ -77,20 +79,20 @@ export const TagsDialog = ({ onClose }: { onClose: () => void }) => {
           <div className="min-w-0">
             <DialogTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
               <Tags className="h-4 w-4 text-emerald-700" />
-              标签
+              {t("tagsDialog.title")}
             </DialogTitle>
             <DialogDescription className="mt-1 text-xs text-slate-500">
-              {tags.length} tags
+              {t("tagsDialog.count", { count: tags.length })}
             </DialogDescription>
           </div>
         </DialogHeader>
 
         <div className="max-h-[60vh] overflow-y-auto p-5">
           {tagsQuery.isLoading ? (
-            <div className="px-2 py-8 text-center text-sm text-slate-500">加载中</div>
+            <div className="px-2 py-8 text-center text-sm text-slate-500">{t("tagsDialog.loading")}</div>
           ) : tags.length === 0 ? (
             <div className="rounded-md border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
-              暂无标签
+              {t("tagsDialog.empty")}
             </div>
           ) : (
             <div className="space-y-2">
@@ -116,7 +118,7 @@ export const TagsDialog = ({ onClose }: { onClose: () => void }) => {
                           }}
                         >
                           <label className="sr-only" htmlFor={`tag-rename-${tag.name}`}>
-                            标签名称
+                            {t("tagsDialog.nameLabel")}
                           </label>
                           <Input
                             id={`tag-rename-${tag.name}`}
@@ -141,10 +143,10 @@ export const TagsDialog = ({ onClose }: { onClose: () => void }) => {
                               variant="solid"
                               disabled={!nextName || nextName === tag.name || renameMutation.isPending}
                             >
-                              保存
+                              {t("common.save")}
                             </Button>
                             <Button size="sm" type="button" variant="outline" onClick={handleCancelRename} disabled={renameMutation.isPending}>
-                              取消
+                              {t("common.cancel")}
                             </Button>
                           </div>
                         </form>
@@ -152,17 +154,17 @@ export const TagsDialog = ({ onClose }: { onClose: () => void }) => {
                         <>
                           <span className="block truncate text-sm font-semibold text-slate-950">#{tag.name}</span>
                           <span className="mt-1 block text-xs text-slate-500">
-                            {tag.memoCount} 条笔记{tag.updatedAt ? ` · ${formatDateTime(tag.updatedAt)}` : ""}
+                            {t("tagsDialog.memoCount", { count: tag.memoCount })}{tag.updatedAt ? ` · ${formatDateTime(tag.updatedAt)}` : ""}
                           </span>
                         </>
                       )}
                     </span>
                     {!isEditing && (
                       <>
-                        <Button size="icon" variant="ghost" title="重命名标签" aria-label={`重命名标签 ${tag.name}`} onClick={() => handleRename(tag)}>
+                        <Button size="icon" variant="ghost" title={t("tagsDialog.renameTitle")} aria-label={t("tagsDialog.renameAria", { name: tag.name })} onClick={() => handleRename(tag)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button size="icon" variant="danger" title="删除标签" aria-label={`删除标签 ${tag.name}`} onClick={() => handleDelete(tag)}>
+                        <Button size="icon" variant="danger" title={t("tagsDialog.deleteTitle")} aria-label={t("tagsDialog.deleteAria", { name: tag.name })} onClick={() => handleDelete(tag)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </>
@@ -177,9 +179,9 @@ export const TagsDialog = ({ onClose }: { onClose: () => void }) => {
 
       {tagDeleteConfirmation && (
         <AppConfirmDialog
-          title={`删除标签 #${tagDeleteConfirmation.name}`}
-          description={`将从 ${tagDeleteConfirmation.memoCount} 条笔记中移除这个标签，笔记内容不会被删除。`}
-          confirmLabel="删除标签"
+          title={t("tagsDialog.deleteConfirmTitle", { name: tagDeleteConfirmation.name })}
+          description={t("tagsDialog.deleteConfirmDescription", { count: tagDeleteConfirmation.memoCount })}
+          confirmLabel={t("tagsDialog.deleteConfirmLabel")}
           isWorking={deleteMutation.isPending}
           tone="danger"
           onCancel={() => setTagDeleteConfirmation(null)}

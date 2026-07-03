@@ -1,5 +1,7 @@
 # EdgeEver
 
+[简体中文](README.md) | [English](README.en-US.md)
+
 > **EdgeEver: A self-hosted, Cloudflare-native Evernote alternative.**
 >
 > **EdgeEver：基于 Cloudflare 全家桶自托管的免费开源『印象笔记』。**

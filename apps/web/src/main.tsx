@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./app/App";
+import "./i18n";
 import { emitPwaUpdateNotice, markPwaUpdateReloadPending } from "./lib/pwa-update-notice";
 import "./styles/globals.css";
 

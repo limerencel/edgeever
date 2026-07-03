@@ -1,10 +1,15 @@
+import { useMemo } from "react";
 import { ChevronLeft, HelpCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { marked } from "marked";
 import migrationGuideMarkdown from "../../../../docs/evernote-migration-guide.md?raw";
+import migrationGuideEnglishMarkdown from "../../../../docs/evernote-migration-guide.en-US.md?raw";
 
 export const EvernoteImportGuidePane = ({ onClose }: { onClose: () => void }) => {
-  const htmlContent = marked.parse(migrationGuideMarkdown) as string;
+  const { i18n, t } = useTranslation();
+  const markdown = i18n.resolvedLanguage === "en-US" ? migrationGuideEnglishMarkdown : migrationGuideMarkdown;
+  const htmlContent = useMemo(() => marked.parse(markdown) as string, [markdown]);
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-slate-50">
@@ -13,8 +18,8 @@ export const EvernoteImportGuidePane = ({ onClose }: { onClose: () => void }) =>
           <Button
             size="icon"
             variant="ghost"
-            title="返回"
-            aria-label="返回"
+            title={t("common.back")}
+            aria-label={t("common.back")}
             onClick={onClose}
             className="h-9 w-9 rounded-lg hover:bg-slate-100"
           >
@@ -23,10 +28,10 @@ export const EvernoteImportGuidePane = ({ onClose }: { onClose: () => void }) =>
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-base font-bold leading-tight text-slate-900">
               <HelpCircle className="h-4 w-4 text-emerald-700" />
-              印象笔记迁移指引
+              {t("evernoteGuide.title")}
             </h1>
             <p className="mt-0.5 truncate text-xs font-medium text-slate-400">
-              AI Agent 驱动一键迁移，无损保留笔记本组结构
+              {t("evernoteGuide.subtitle")}
             </p>
           </div>
         </div>

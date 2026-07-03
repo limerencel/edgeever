@@ -9,6 +9,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   X,
   ChevronLeft,
@@ -59,8 +60,8 @@ import type {
 } from "@/lib/app-helpers";
 import type { SyncQueueSummary } from "@/lib/sync-queue";
 import {
-  MEMO_FILTER_OPTIONS,
-  MEMO_SORT_OPTIONS,
+  getMemoFilterOptions,
+  getMemoSortOptions,
   getNotebookMoveOptions,
   readMemoListDensityPreference,
   writeMemoListDensityPreference,
@@ -78,7 +79,8 @@ const MobileSelectionMoreSheet = lazy(() =>
   import("./MemoListMobileSheets").then((module) => ({ default: module.MobileSelectionMoreSheet }))
 );
 
-const getSelectionCountLabel = (count: number) => (count > 0 ? `已选择 ${count} 条` : "选择笔记");
+const getSelectionCountLabel = (count: number, t: ReturnType<typeof useTranslation>["t"]) =>
+  count > 0 ? t("memoList.selectionCount", { count }) : t("memoList.selectMemo");
 
 export const MemoSelectionActionBar = ({
   deleteTitle,
@@ -122,19 +124,22 @@ export const MemoSelectionActionBar = ({
   pinTitle: string;
   selectedCount: number;
   onMoveTargetChange: (notebookId: string) => void;
-}) => (
+}) => {
+  const { t } = useTranslation();
+
+  return (
   <div className="hidden h-full min-h-0 flex-1 items-center justify-start bg-white px-16 py-10 lg:flex xl:px-24">
     <div className="w-72 overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg">
       <div className="flex h-9 items-center gap-2 px-3 text-xs font-semibold text-slate-400">
         <CheckSquare className="h-4 w-4" />
-        {getSelectionCountLabel(selectedCount)}
+        {getSelectionCountLabel(selectedCount, t)}
       </div>
       {!isTrashView && moveNotebookOptions.length > 0 && (
         <div className="border-t border-slate-100 px-3 py-2">
           <div className="flex items-center gap-2">
             <Select value={moveTargetNotebookId} disabled={isMoving} onValueChange={onMoveTargetChange}>
               <SelectTrigger className="h-8 min-w-0 flex-1 text-xs text-slate-700 border-slate-200">
-                <SelectValue placeholder="选择笔记本" />
+                <SelectValue placeholder={t("memoList.chooseNotebook")} />
               </SelectTrigger>
               <SelectContent className="max-h-60 bg-white border border-slate-200 rounded-md py-1 shadow-md">
                 {moveNotebookOptions.map((item) => (
@@ -152,7 +157,7 @@ export const MemoSelectionActionBar = ({
               disabled={selectedCount === 0 || !moveTargetNotebookId || isMoving || isTrashView}
             >
               <Folder className="h-4 w-4" />
-              移动
+              {t("memoList.move")}
             </Button>
           </div>
         </div>
@@ -175,7 +180,7 @@ export const MemoSelectionActionBar = ({
         disabled={selectedCount < 2 || isMerging || isTrashView}
       >
         <Merge className="h-4 w-4" />
-        合并笔记
+        {t("memoList.mergeMemos")}
       </Button>
       <div className="h-px bg-slate-100" />
       <Button
@@ -186,21 +191,22 @@ export const MemoSelectionActionBar = ({
         disabled={selectedCount === 0 || isDeleting}
       >
         <Trash2 className="h-4 w-4" />
-        {isTrashView ? "永久删除" : "删除"}
+        {isTrashView ? t("memoList.permanentDelete") : t("common.delete")}
       </Button>
       <div className="h-px bg-slate-100" />
       <Button
         className="h-11 w-full justify-start rounded-none px-3 text-slate-700 hover:bg-slate-50"
         variant="ghost"
-        title="取消选择"
+        title={t("memoList.clearSelection")}
         onClick={onClearSelection}
       >
         <X className="h-4 w-4" />
-        取消选择
+        {t("memoList.clearSelection")}
       </Button>
     </div>
   </div>
-);
+  );
+};
 
 const getMobileFilterIcon = (filterMode: MemoFilterMode) => {
   if (filterMode === "tagged") {
@@ -259,30 +265,34 @@ const MobileSelectionActionBar = ({
   onDelete: () => void;
   onOpenMore: () => void;
   onOpenMove: () => void;
-}) => (
-  <nav
-    className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-8 pb-[max(0.125rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
-    aria-label="批量操作"
-  >
-    <div className="grid h-14 grid-cols-3 items-center">
-      <MobileSelectionActionButton
-        disabled={!canMove}
-        icon={<Folder className="h-5 w-5" />}
-        label="移动"
-        title={moveTitle}
-        onClick={onOpenMove}
-      />
-      <MobileSelectionActionButton
-        disabled={!canDelete}
-        icon={<Trash2 className="h-5 w-5" />}
-        label={isTrashView ? "永久删除" : "删除"}
-        title={deleteTitle}
-        onClick={onDelete}
-      />
-      <MobileSelectionActionButton icon={<MoreVertical className="h-5 w-5" />} label="更多" onClick={onOpenMore} />
-    </div>
-  </nav>
-);
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-8 pb-[max(0.125rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
+      aria-label={t("mobileSheets.bulkActions")}
+    >
+      <div className="grid h-14 grid-cols-3 items-center">
+        <MobileSelectionActionButton
+          disabled={!canMove}
+          icon={<Folder className="h-5 w-5" />}
+          label={t("workspace.selection.move")}
+          title={moveTitle}
+          onClick={onOpenMove}
+        />
+        <MobileSelectionActionButton
+          disabled={!canDelete}
+          icon={<Trash2 className="h-5 w-5" />}
+          label={isTrashView ? t("workspace.selection.permanentDelete") : t("workspace.selection.delete")}
+          title={deleteTitle}
+          onClick={onDelete}
+        />
+        <MobileSelectionActionButton icon={<MoreVertical className="h-5 w-5" />} label={t("mobileSheets.more")} onClick={onOpenMore} />
+      </div>
+    </nav>
+  );
+};
 
 const CheckCircleCheck = ({ className }: { className?: string }) => (
   <svg
@@ -427,13 +437,15 @@ export const MemoListPane = ({
   setDesktopActionsOpen: (open: boolean) => void;
   onRetry: () => void;
 }) => {
+  const { t } = useTranslation();
   const [memoContextMenu, setMemoContextMenu] = useState<MemoContextMenuState | null>(null);
   const [contextMoveOpen, setContextMoveOpen] = useState(false);
   const [listDensity, setListDensity] = useState<MemoListDensity>(() => readMemoListDensityPreference());
   const [lastSelectedMemoId, setLastSelectedMemoId] = useState<string | null>(null);
   const [moveTargetNotebookId, setMoveTargetNotebookId] = useState("");
 
-  const filterOptions = MEMO_FILTER_OPTIONS;
+  const filterOptions = useMemo(() => getMemoFilterOptions(t), [t]);
+  const memoSortOptions = useMemo(() => getMemoSortOptions(t), [t]);
   const mobileFilterOptions = useMemo(() => filterOptions.filter((option: any) => option.value !== "all"), [filterOptions]);
   const visibleMemoIds = useMemo(() => memos.map((memo) => memo.id), [memos]);
   const moveNotebookOptions = useMemo(() => getNotebookMoveOptions(notebooks), [notebooks]);
@@ -451,46 +463,47 @@ export const MemoListPane = ({
   const selectedVisibleMemoCount = visibleMemoIds.filter((memoId) => selectedMemoIds.has(memoId)).length;
   const allVisibleMemosSelected = visibleMemoIds.length > 0 && selectedVisibleMemoCount === visibleMemoIds.length;
   const canToggleVisibleMemoSelection = visibleMemoIds.length > 0;
-  const visibleSelectionToggleLabel = allVisibleMemosSelected ? "全不选当前列表" : "全选当前列表";
+  const visibleSelectionToggleLabel = allVisibleMemosSelected ? t("memoList.selectedListNone") : t("memoList.selectedListAll");
 
-  const listTitle = view === "trash" ? "回收站" : notebook?.name ?? "全部笔记";
-  const listContextLabel = view === "trash" ? "已删除笔记" : notebook ? "当前笔记本" : "所有笔记本";
-  const listCountLabel = `${memos.length}${memos.length !== totalMemoCount ? ` / ${totalMemoCount}` : ""} ${
-    view === "trash" ? "条已删除" : "条笔记"
-  }`;
-  const selectionCountLabel = getSelectionCountLabel(selectedMemoIds.size);
+  const listTitle = view === "trash" ? t("memoList.trash") : notebook?.name ?? t("memoList.allMemos");
+  const listContextLabel = view === "trash" ? t("memoList.deletedMemos") : notebook ? t("memoList.currentNotebook") : t("memoList.allNotebooks");
+  const visibleCount = `${memos.length}${memos.length !== totalMemoCount ? ` / ${totalMemoCount}` : ""}`;
+  const listCountLabel = view === "trash"
+    ? t("memoList.deletedCount", { count: visibleCount })
+    : t("memoList.memoCount", { count: visibleCount });
+  const selectionCountLabel = getSelectionCountLabel(selectedMemoIds.size, t);
 
   const selectionMoveTitle =
     selectedMemoIds.size === 0
-      ? "请选择笔记"
+      ? t("workspace.selection.chooseMemo")
       : view === "trash"
-        ? "回收站内不可移动"
+        ? t("workspace.selection.trashCannotMove")
         : notebooks.length === 0
-          ? "没有可移动的笔记本"
+          ? t("workspace.selection.noMovableNotebook")
           : isMoving
-            ? "正在移动"
-            : "移动";
+            ? t("workspace.selection.moving")
+            : t("workspace.selection.move");
   const selectionDeleteTitle =
-    selectedMemoIds.size === 0 ? "请选择笔记" : isDeleting ? "正在删除" : view === "trash" ? "永久删除" : "删除";
+    selectedMemoIds.size === 0 ? t("workspace.selection.chooseMemo") : isDeleting ? t("workspace.selection.deleting") : view === "trash" ? t("workspace.selection.permanentDelete") : t("workspace.selection.delete");
   const selectionMergeTitle =
-    selectedMemoIds.size < 2 ? "至少选择 2 条笔记" : view === "trash" ? "回收站内不可合并" : isMerging ? "正在合并" : "合并笔记";
+    selectedMemoIds.size < 2 ? t("workspace.selection.needTwoMemos") : view === "trash" ? t("workspace.selection.trashCannotMerge") : isMerging ? t("workspace.selection.merging") : t("workspace.selection.merge");
   const allSelectedMemosPinned = selectedMemosInList.length > 0 && selectedMemosInList.every((memo) => memo.isPinned);
   const selectedPinTarget = !allSelectedMemosPinned;
-  const selectionPinLabel = allSelectedMemosPinned ? "取消置顶" : "置顶";
+  const selectionPinLabel = allSelectedMemosPinned ? t("workspace.selection.unpin") : t("workspace.selection.pin");
   const selectionPinTitle =
     selectedMemoIds.size === 0
-      ? "请选择笔记"
+      ? t("workspace.selection.chooseMemo")
       : view === "trash"
-        ? "回收站内不可置顶"
+        ? t("workspace.selection.trashCannotPin")
         : isPinning
-          ? "正在更新置顶"
+          ? t("workspace.selection.updatingPin")
           : selectionPinLabel;
-  const selectionToggleTitle = canToggleVisibleMemoSelection ? visibleSelectionToggleLabel : "当前列表没有可选择的笔记";
+  const selectionToggleTitle = canToggleVisibleMemoSelection ? visibleSelectionToggleLabel : t("memoList.noSelectableInList");
   const moveTargetTitle =
-    view === "trash" ? "回收站内不可移动" : notebooks.length === 0 ? "没有可移动的笔记本" : isMoving ? "正在移动" : "移动到笔记本";
+    view === "trash" ? t("workspace.selection.trashCannotMove") : notebooks.length === 0 ? t("workspace.selection.noMovableNotebook") : isMoving ? t("workspace.selection.moving") : t("memoList.moveToNotebook");
   const hasListConstraint = Boolean(search.trim()) || filterMode !== "all";
-  const activeFilterLabel = filterOptions.find((option) => option.value === filterMode)?.label ?? "全部";
-  const activeSortLabel = MEMO_SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "最近更新";
+  const activeFilterLabel = filterOptions.find((option) => option.value === filterMode)?.label ?? t("options.memoFilter.all");
+  const activeSortLabel = memoSortOptions.find((option) => option.value === sortMode)?.label ?? t("options.memoSort.updatedDesc");
 
   useEffect(() => {
     if (notebook?.id) {
@@ -878,8 +891,8 @@ export const MemoListPane = ({
             <button
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
               type="button"
-              title="取消选择"
-              aria-label="取消选择"
+              title={t("memoList.clearSelection")}
+              aria-label={t("memoList.clearSelection")}
               onClick={onClearSelection}
             >
               <X className="h-5 w-5" />
@@ -891,8 +904,8 @@ export const MemoListPane = ({
             <button
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
               type="button"
-              title="退出搜索"
-              aria-label="退出搜索"
+              title={t("memoList.cancelSearch")}
+              aria-label={t("memoList.cancelSearch")}
               onClick={onCancelMobileSearch}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -922,14 +935,14 @@ export const MemoListPane = ({
                   onCancelMobileSearch();
                 }}
                 className="min-w-0 flex-1 bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
-                placeholder="搜索笔记"
+                placeholder={t("memoList.searchPlaceholder")}
               />
               {search && (
                 <button
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                   type="button"
-                  title="清空搜索"
-                  aria-label="清空搜索"
+                  title={t("memoList.clearSearch")}
+                  aria-label={t("memoList.clearSearch")}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={handleClearSearch}
                 >
@@ -942,7 +955,7 @@ export const MemoListPane = ({
               type="button"
               onClick={onCancelMobileSearch}
             >
-              取消
+              {t("memoList.cancel")}
             </button>
           </div>
         ) : null}
@@ -953,8 +966,8 @@ export const MemoListPane = ({
               <button
                 className="flex min-w-0 items-center gap-1 rounded-md px-1 py-1 text-left transition hover:bg-slate-100 lg:hidden"
                 type="button"
-                title="切换笔记本"
-                aria-label="切换笔记本"
+                title={t("memoList.switchNotebook")}
+                aria-label={t("memoList.switchNotebook")}
                 onClick={onOpenNotebookPicker}
               >
                 <span className="max-w-[190px] truncate text-lg font-semibold text-slate-950">{listTitle}</span>
@@ -964,8 +977,8 @@ export const MemoListPane = ({
             <button
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
               type="button"
-              title={selectionMode ? "批量操作" : "列表选项"}
-              aria-label={selectionMode ? "批量操作" : "列表选项"}
+              title={selectionMode ? t("memoList.bulkActions") : t("memoList.listOptions")}
+              aria-label={selectionMode ? t("memoList.bulkActions") : t("memoList.listOptions")}
               aria-expanded={selectionMode ? mobileMoreOpen : mobileListActionsOpen}
               onClick={() => {
                 if (selectionMode) {
@@ -992,8 +1005,8 @@ export const MemoListPane = ({
             <Button
               size="icon"
               variant="ghost"
-              title="选择笔记"
-              aria-label="选择笔记"
+              title={t("memoList.selectMemo")}
+              aria-label={t("memoList.selectMemo")}
               onClick={onEnterSelectionMode}
               disabled={!canEnterSelectionMode}
             >
@@ -1008,7 +1021,7 @@ export const MemoListPane = ({
                       ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       : "border-slate-300 bg-slate-100 text-slate-900 hover:bg-slate-200"
                   )}
-                  title={`筛选：${activeFilterLabel}`}
+                  title={t("memoList.filterTitle", { label: activeFilterLabel })}
                 >
                   {getMobileFilterIcon(filterMode)}
                 </button>
@@ -1034,13 +1047,13 @@ export const MemoListPane = ({
               <DropdownMenuTrigger asChild>
                 <button
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 outline-none"
-                  title={`排序：${activeSortLabel}`}
+                  title={t("memoList.sortTitle", { label: activeSortLabel })}
                 >
                   <ArrowDownWideNarrow className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-44 bg-white border border-slate-200 rounded-md py-1 shadow-md">
-                {MEMO_SORT_OPTIONS.map((option: any) => (
+                {memoSortOptions.map((option: any) => (
                   <DropdownMenuItem
                     key={option.value}
                     className={cn(
@@ -1068,18 +1081,18 @@ export const MemoListPane = ({
               <ToggleGroupItem
                 className="rounded-none border-0"
                 size="icon"
-                title="预览列表"
+                title={t("memoList.previewList")}
                 value="preview"
-                aria-label="预览列表"
+                aria-label={t("memoList.previewList")}
               >
                 <LayoutList className="h-4 w-4" />
               </ToggleGroupItem>
               <ToggleGroupItem
                 className="rounded-none border-0 border-l border-slate-200"
                 size="icon"
-                title="紧凑列表"
+                title={t("memoList.compactList")}
                 value="compact"
-                aria-label="紧凑列表"
+                aria-label={t("memoList.compactList")}
               >
                 <List className="h-4 w-4" />
               </ToggleGroupItem>
@@ -1090,11 +1103,11 @@ export const MemoListPane = ({
               <Button
                 size="sm"
                 variant="danger"
-                title="清空回收站，不可恢复"
+                title={t("memoList.emptyTrashTitle")}
                 onClick={onEmptyTrash}
               >
                 <Trash2 className="h-4 w-4" />
-                清空
+                {t("memoList.emptyTrash")}
               </Button>
             )}
             <DropdownMenu>
@@ -1102,8 +1115,8 @@ export const MemoListPane = ({
                 <Button
                   size="icon"
                   variant="ghost"
-                  title="更多"
-                  aria-label="列表更多操作"
+                  title={t("memoList.more")}
+                  aria-label={t("memoList.moreActions")}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -1114,21 +1127,21 @@ export const MemoListPane = ({
                   onClick={onOpenTags}
                 >
                   <Tags className="h-4 w-4 text-slate-500" />
-                  标签
+                  {t("memoList.tags")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                   onClick={onOpenAssets}
                 >
                   <Archive className="h-4 w-4 text-slate-500" />
-                  附件
+                  {t("memoList.assets")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                   onClick={view === "trash" ? onEmptyTrash : onOpenTrash}
                 >
                   <Trash2 className="h-4 w-4 text-rose-700" />
-                  {view === "trash" ? "清空回收站" : "回收站"}
+                  {view === "trash" ? t("memoList.emptyTrash") : t("memoList.trash")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
@@ -1162,14 +1175,14 @@ export const MemoListPane = ({
                 }
               }}
               className="min-w-0 flex-1 bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
-              placeholder="搜索笔记"
+              placeholder={t("memoList.searchPlaceholder")}
             />
             {search && (
               <button
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-white hover:text-slate-700"
                 type="button"
-                title="清空搜索"
-                aria-label="清空搜索"
+                title={t("memoList.clearSearch")}
+                aria-label={t("memoList.clearSearch")}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={handleClearSearch}
               >
@@ -1188,8 +1201,8 @@ export const MemoListPane = ({
                     : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 )}
                 type="button"
-                title={filterMode === option.value ? `取消${option.label}` : option.label}
-                aria-label={filterMode === option.value ? `取消${option.label}` : option.label}
+                title={filterMode === option.value ? t("memoList.toggleOffFilter", { label: option.label }) : option.label}
+                aria-label={filterMode === option.value ? t("memoList.toggleOffFilter", { label: option.label }) : option.label}
                 aria-pressed={filterMode === option.value}
                 onClick={() => handleFilterModeChange(filterMode === option.value ? "all" : option.value)}
               >
@@ -1202,14 +1215,19 @@ export const MemoListPane = ({
         {hasListConstraint && (
           <div className="mt-3 flex min-h-8 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500">
             <span className="min-w-0 flex-1 truncate">
-              {search.trim() ? `搜索「${search.trim()}」` : `筛选：${activeFilterLabel}`} · {totalMemoCount} 条
+              {t("memoList.constrainedCount", {
+                label: search.trim()
+                  ? t("memoList.searchConstraint", { query: search.trim() })
+                  : t("memoList.filterConstraint", { label: activeFilterLabel }),
+                count: totalMemoCount,
+              })}
             </span>
             <button
               className="shrink-0 font-semibold text-slate-600 transition hover:text-slate-950"
               type="button"
               onClick={handleResetListConstraints}
             >
-              重置
+              {t("memoList.reset")}
             </button>
           </div>
         )}
@@ -1220,34 +1238,34 @@ export const MemoListPane = ({
         className="relative min-h-0 flex-1 overflow-y-auto p-3 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-3"
       >
         {isLoading || (isRefreshing && memos.length === 0) ? (
-          <div className="px-2 py-4 text-sm text-slate-500">正在拉取最新笔记</div>
+          <div className="px-2 py-4 text-sm text-slate-500">{t("memoList.fetchingLatest")}</div>
         ) : isError && memos.length === 0 ? (
           <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 px-4 py-9 text-center">
-            <div className="text-sm font-semibold text-amber-950">暂时没有拉到笔记</div>
+            <div className="text-sm font-semibold text-amber-950">{t("memoList.fetchEmptyTitle")}</div>
             <div className="mx-auto mt-2 max-w-[280px] text-xs leading-5 text-amber-800">
-              网络或 PWA 后台恢复可能短暂中断了同步。这里不会把它当作空笔记本。
+              {t("memoList.fetchEmptyDescription")}
             </div>
             <Button className="mt-4 justify-center" size="sm" variant="soft" onClick={onRetry}>
               <RotateCcw className="h-4 w-4" />
-              重新拉取
+              {t("memoList.retry")}
             </Button>
           </div>
         ) : memos.length === 0 ? (
           <div className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-9 text-center">
             <div className="text-sm font-semibold text-slate-800">
-              {memos.length === 0 ? (view === "trash" ? "回收站为空" : "暂无笔记") : "没有符合筛选的笔记"}
+              {memos.length === 0 ? (view === "trash" ? t("memoList.trashEmptyTitle") : t("memoList.emptyTitle")) : t("memoList.noFilteredTitle")}
             </div>
             <div className="mx-auto mt-2 max-w-[260px] text-xs leading-5 text-slate-500">
               {memos.length === 0
                 ? view === "trash"
-                  ? "删除的笔记会显示在这里。"
-                  : "先创建一条笔记，之后可以在这里快速预览、搜索和批量整理。"
-                : "试试切换筛选条件，或调整搜索关键词。"}
+                  ? t("memoList.trashEmptyDescription")
+                  : t("memoList.emptyDescription")
+                : t("memoList.noFilteredDescription")}
             </div>
             {memos.length === 0 && canCreateMemo && view !== "trash" && (
               <Button className="mt-4 justify-center" size="sm" variant="solid" onClick={onCreateMemo} disabled={isCreating}>
                 <FilePlus2 className="h-4 w-4" />
-                新建笔记
+                {t("memoList.newMemo")}
               </Button>
             )}
           </div>
@@ -1278,7 +1296,7 @@ export const MemoListPane = ({
             </div>
             {isLoadingMoreMemos && (
               <div className="border-t border-slate-100 px-4 py-3 text-center text-xs font-medium text-slate-500">
-                正在加载更多笔记
+                {t("memoList.loadingMore")}
               </div>
             )}
           </div>
@@ -1302,7 +1320,7 @@ export const MemoListPane = ({
                 }}
               >
                 <FileIcon className="h-4 w-4" />
-                打开笔记
+                {t("memoList.openMemo")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
@@ -1313,7 +1331,7 @@ export const MemoListPane = ({
                 }}
               >
                 <CheckSquare className="h-4 w-4" />
-                选择笔记
+                {t("memoList.selectMemo")}
               </DropdownMenuItem>
               {view !== "trash" && (
                 <DropdownMenuItem
@@ -1326,7 +1344,7 @@ export const MemoListPane = ({
                   }}
                 >
                   <Star className={cn("h-4 w-4", memoContextMenu.memo.isPinned && "fill-current text-slate-700")} />
-                  {memoContextMenu.memo.isPinned ? "取消置顶" : "置顶笔记"}
+                  {memoContextMenu.memo.isPinned ? t("memoList.unpin") : t("memoList.pinMemo")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator className="my-1 h-px bg-slate-100" />
@@ -1341,7 +1359,7 @@ export const MemoListPane = ({
                     }}
                   >
                     <RotateCcw className="h-4 w-4" />
-                    恢复笔记
+                    {t("memoList.restoreMemo")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-rose-700 hover:bg-rose-50 cursor-pointer outline-none"
@@ -1352,7 +1370,7 @@ export const MemoListPane = ({
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
-                    永久删除
+                    {t("memoList.permanentDelete")}
                   </DropdownMenuItem>
                 </>
               ) : (
@@ -1363,7 +1381,7 @@ export const MemoListPane = ({
                     onClick={() => setContextMoveOpen((value) => !value)}
                   >
                     <Folder className="h-4 w-4" />
-                    <span className="min-w-0 flex-1 truncate">移动到笔记本</span>
+                    <span className="min-w-0 flex-1 truncate">{t("memoList.moveToNotebook")}</span>
                     <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", contextMoveOpen && "rotate-90")} />
                   </DropdownMenuItem>
                   {contextMoveOpen && (
@@ -1400,7 +1418,7 @@ export const MemoListPane = ({
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
-                    删除笔记
+                    {t("memoList.deleteMemo")}
                   </DropdownMenuItem>
                 </>
               )}

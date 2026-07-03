@@ -1,13 +1,4 @@
-const TOKEN_SCOPE_LABELS: Record<string, string> = {
-  "read:notebooks": "读取笔记本",
-  "write:notebooks": "创建与修改笔记本",
-  "read:memos": "读取笔记",
-  "write:memos": "创建与修改笔记",
-  "read:resources": "读取附件资源",
-  "write:resources": "上传与修改附件",
-  "read:tags": "读取标签",
-  "write:tags": "创建与修改标签",
-};
+import type { TFunction } from "i18next";
 
 export const ALL_TOKEN_SCOPES = [
   "read:notebooks",
@@ -20,7 +11,7 @@ export const ALL_TOKEN_SCOPES = [
   "write:tags",
 ];
 
-export const getTokenScopeLabel = (scope: string) => TOKEN_SCOPE_LABELS[scope] ?? scope;
+export const getTokenScopeLabel = (scope: string, t: TFunction) => t(`mcp.scopes.${scope}`, { defaultValue: scope });
 
 export const copyTextToClipboard = async (text: string) => {
   if (navigator.clipboard?.writeText) {

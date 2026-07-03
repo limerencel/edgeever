@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, Copy, KeyRound, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import type { ApiToken } from "@edgeever/shared";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface CreatedTokenNoticeProps {
 }
 
 const CreatedTokenNotice = ({ token }: CreatedTokenNoticeProps) => {
+  const { t } = useTranslation();
   const [copiedAction, setCopiedAction] = useState<"token" | "config" | null>(null);
 
   const handleCopy = async (action: "token" | "config") => {
@@ -41,7 +43,7 @@ const CreatedTokenNotice = ({ token }: CreatedTokenNoticeProps) => {
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-900">
         <ShieldCheck className="h-4 w-4 text-emerald-700" />
-        API Token 已成功生成
+        {t("mcp.createdTitle")}
       </div>
       <div className="flex flex-col gap-2 xl:flex-row">
         <div className="flex h-8 min-w-0 flex-1 items-center rounded-md border border-emerald-200 bg-white px-3 font-mono text-xs text-slate-900">
@@ -55,7 +57,7 @@ const CreatedTokenNotice = ({ token }: CreatedTokenNoticeProps) => {
             type="button"
             onClick={() => void handleCopy("token")}
           >
-            {copiedAction === "token" ? "已复制" : "复制 Token"}
+            {copiedAction === "token" ? t("common.copied") : t("mcp.copyToken")}
           </Button>
           <Button
             size="sm"
@@ -64,16 +66,17 @@ const CreatedTokenNotice = ({ token }: CreatedTokenNoticeProps) => {
             type="button"
             onClick={() => void handleCopy("config")}
           >
-            {copiedAction === "config" ? "已复制" : "复制完整 MCP 配置"}
+            {copiedAction === "config" ? t("common.copied") : t("mcp.copyConfig")}
           </Button>
         </div>
       </div>
-      <p className="mt-2 text-xs font-medium leading-4 text-emerald-800">安全提醒：此 Token 属于高危凭证，请勿对外泄露。</p>
+      <p className="mt-2 text-xs font-medium leading-4 text-emerald-800">{t("mcp.securityWarning")}</p>
     </div>
   );
 };
 
 const McpTitleWithHelp = () => {
+  const { t } = useTranslation();
   const baseUrl = getEdgeEverBaseUrl();
   const [copied, setCopied] = useState(false);
   const remoteExample = JSON.stringify(
@@ -82,7 +85,7 @@ const McpTitleWithHelp = () => {
         edgeever: {
           url: `${baseUrl}/mcp`,
           headers: {
-            Authorization: "Bearer 我创建的token",
+            Authorization: t("mcp.bearerPlaceholder"),
           },
         },
       },
@@ -104,16 +107,16 @@ const McpTitleWithHelp = () => {
     <div className="w-fit max-w-full">
       <CardTitle className="flex items-center gap-2 text-sm">
         <KeyRound className="h-4 w-4 text-emerald-700" />
-        生成 MCP 配置
+        {t("mcp.title")}
         <Dialog>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline" className="h-7 bg-white px-2.5 text-xs" type="button">
-              使用示例
+              {t("mcp.example")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl gap-3 p-4 sm:p-5">
             <DialogHeader>
-              <DialogTitle className="text-base">Remote MCP 示例</DialogTitle>
+              <DialogTitle className="text-base">{t("mcp.exampleTitle")}</DialogTitle>
             </DialogHeader>
             <pre className="max-h-[55vh] overflow-auto rounded-md border border-slate-100 bg-slate-950 p-3 text-left text-[11px] leading-5 text-slate-100 sm:text-xs">
               <code>{remoteExample}</code>
@@ -127,7 +130,7 @@ const McpTitleWithHelp = () => {
                 onClick={() => void handleCopy()}
               >
                 <Copy className="h-3.5 w-3.5" />
-                {copied ? "已复制" : "复制示例"}
+                {copied ? t("common.copied") : t("mcp.copyExample")}
               </Button>
             </div>
           </DialogContent>
@@ -144,6 +147,7 @@ interface ScopePickerProps {
 }
 
 const ScopePicker = ({ availableScopes, selectedScopes, onToggleScope }: ScopePickerProps) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -155,9 +159,9 @@ const ScopePicker = ({ availableScopes, selectedScopes, onToggleScope }: ScopePi
         onClick={() => setExpanded((current) => !current)}
       >
         <span className="min-w-0">
-          <span className="block text-xs font-semibold text-slate-700">Token 权限范围</span>
+          <span className="block text-xs font-semibold text-slate-700">{t("mcp.scopeTitle")}</span>
           <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
-            已选择 {selectedScopes.size}/{availableScopes.length}
+            {t("mcp.selectedScopes", { selected: selectedScopes.size, total: availableScopes.length })}
           </span>
         </span>
         <ChevronDown
@@ -191,7 +195,7 @@ const ScopePicker = ({ availableScopes, selectedScopes, onToggleScope }: ScopePi
                   className="border-emerald-300"
                 />
                 <span className="min-w-0 truncate text-xs font-semibold" title={scope}>
-                  {getTokenScopeLabel(scope)}
+                  {getTokenScopeLabel(scope, t)}
                 </span>
               </label>
             );
@@ -210,6 +214,7 @@ interface TokenListProps {
 }
 
 const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) => {
+  const { t } = useTranslation();
   const [copiedAction, setCopiedAction] = useState<{ tokenId: string; action: "token" | "config" } | null>(null);
 
   const handleCopy = async (token: ApiToken, action: "token" | "config") => {
@@ -231,7 +236,7 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
   if (isLoading) {
     return (
       <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
-        正在加载 Token 列表...
+        {t("mcp.loadingTokens")}
       </div>
     );
   }
@@ -239,7 +244,7 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
   if (tokens.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
-        暂无活跃的 API Token
+        {t("mcp.emptyTokens")}
       </div>
     );
   }
@@ -260,11 +265,11 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
               className="mt-2 block w-fit max-w-full truncate rounded-md border border-slate-100 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500"
               title={token.scopes.join(", ")}
             >
-              {token.scopes.map(getTokenScopeLabel).join("、") || "无权限"}
+              {token.scopes.map((scope) => getTokenScopeLabel(scope, t)).join("、") || t("mcp.noScope")}
             </span>
             <span className="mt-2 block text-[11px] font-medium text-slate-400">
-              {token.lastUsedAt ? `上次调用时间：${formatDateTime(token.lastUsedAt)}` : "从未被调用"}
-              {!token.token ? " · 旧 Token 无法找回明文，请重新生成" : ""}
+              {token.lastUsedAt ? t("mcp.lastUsedAt", { time: formatDateTime(token.lastUsedAt) }) : t("mcp.neverUsed")}
+              {!token.token ? ` · ${t("mcp.legacyTokenHint")}` : ""}
             </span>
           </span>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:items-center">
@@ -272,8 +277,8 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
               size="sm"
               variant="outline"
               className="h-9 justify-center whitespace-nowrap bg-white px-3 text-xs"
-              title={token.token ? "复制 Token" : "旧 Token 无法复制"}
-              aria-label={token.token ? "复制 Token" : "旧 Token 无法复制"}
+              title={token.token ? t("mcp.copyToken") : t("mcp.legacyTokenCannotCopy")}
+              aria-label={token.token ? t("mcp.copyToken") : t("mcp.legacyTokenCannotCopy")}
               disabled={token.isRevoked || !token.token}
               onClick={() => void handleCopy(token, "token")}
             >
@@ -282,14 +287,14 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              {copiedAction?.tokenId === token.id && copiedAction.action === "token" ? "已复制" : "复制 Token"}
+              {copiedAction?.tokenId === token.id && copiedAction.action === "token" ? t("common.copied") : t("mcp.copyToken")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               className="h-9 justify-center whitespace-nowrap bg-white px-3 text-xs"
-              title={token.token ? "复制完整 MCP 配置" : "旧 Token 无法复制 MCP 配置"}
-              aria-label={token.token ? "复制完整 MCP 配置" : "旧 Token 无法复制 MCP 配置"}
+              title={token.token ? t("mcp.copyConfig") : t("mcp.legacyConfigCannotCopy")}
+              aria-label={token.token ? t("mcp.copyConfig") : t("mcp.legacyConfigCannotCopy")}
               disabled={token.isRevoked || !token.token}
               onClick={() => void handleCopy(token, "config")}
             >
@@ -298,14 +303,14 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              {copiedAction?.tokenId === token.id && copiedAction.action === "config" ? "已复制" : "复制完整 MCP 配置"}
+              {copiedAction?.tokenId === token.id && copiedAction.action === "config" ? t("common.copied") : t("mcp.copyConfig")}
             </Button>
             <Button
               size="icon"
               variant="danger"
               className="h-9 w-full shrink-0 sm:w-9"
-              title="删除 Token"
-              aria-label="删除 Token"
+              title={t("mcp.deleteToken")}
+              aria-label={t("mcp.deleteToken")}
               disabled={token.isRevoked || isDeleting}
               onClick={() => onDelete(token)}
             >
@@ -319,6 +324,7 @@ const TokenList = ({ tokens, isLoading, isDeleting, onDelete }: TokenListProps) 
 };
 
 export const McpConfigCard = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [name, setName] = useState("MCP Agent");
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(() => new Set(ALL_TOKEN_SCOPES));
@@ -388,7 +394,7 @@ export const McpConfigCard = () => {
       <Card className="w-full min-w-0 overflow-hidden shadow-none">
         <CardHeader className="p-4">
           <McpTitleWithHelp />
-          <CardDescription className="text-xs leading-4">让 AI Agent 可以读取和整理你的笔记。</CardDescription>
+          <CardDescription className="text-xs leading-4">{t("mcp.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 p-4 pt-0">
           {createdToken && <CreatedTokenNotice token={createdToken.token} />}
@@ -399,7 +405,7 @@ export const McpConfigCard = () => {
                 className="h-9 min-w-0 flex-1 text-xs focus-visible:ring-4 focus-visible:ring-emerald-500/10"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Token 用途，例如：MCP Agent"
+                placeholder={t("mcp.namePlaceholder")}
               />
               <Button
                 size="md"
@@ -409,7 +415,7 @@ export const McpConfigCard = () => {
                 disabled={createMutation.isPending}
               >
                 <Plus className="h-4 w-4" />
-                生成 Token
+                {t("mcp.createToken")}
               </Button>
             </div>
 
@@ -421,7 +427,7 @@ export const McpConfigCard = () => {
           </form>
 
           <div className="space-y-3">
-            <span className="block text-xs font-semibold text-slate-500">活跃 Token</span>
+            <span className="block text-xs font-semibold text-slate-500">{t("mcp.activeTokens")}</span>
             <TokenList
               tokens={tokens}
               isLoading={tokensQuery.isLoading}
@@ -434,9 +440,9 @@ export const McpConfigCard = () => {
 
       {tokenDeleteConfirmation && (
         <AppConfirmDialog
-          title={`确定要删除 Token「${tokenDeleteConfirmation.name}」吗？`}
-          description="删除操作不可逆。一旦删除，使用此 Token 进行 API 或 MCP 调用的一切客户端将立即失效并被拒绝访问。"
-          confirmLabel="确认删除"
+          title={t("mcp.deleteConfirmTitle", { name: tokenDeleteConfirmation.name })}
+          description={t("mcp.deleteConfirmDescription")}
+          confirmLabel={t("mcp.deleteConfirmLabel")}
           isWorking={deleteTokenMutation.isPending}
           tone="danger"
           onCancel={() => setTokenDeleteConfirmation(null)}

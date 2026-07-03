@@ -1,5 +1,7 @@
 # 印象笔记（Evernote）极简迁移指引
 
+[简体中文](evernote-migration-guide.md) | [English](evernote-migration-guide.en-US.md)
+
 我们强烈推荐使用 AI 编程助手（如 Antigravity、Claude Code、Cursor 等）自动执行迁移。该方案已完成内存流式优化与空文本预处理，能安全应对数 GB 级别超大笔记库，完整保留创建/修改时间与嵌套笔记本目录层级。
 
 ---

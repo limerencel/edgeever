@@ -1,5 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
   Plus,
@@ -33,8 +34,8 @@ import type { Notebook, AuthUser } from "@edgeever/shared";
 import type { NotebookNode, NotebookDropPosition, NotebookSortMode } from "@/lib/app-helpers";
 import type { SyncQueueSummary } from "@/lib/sync-queue";
 import {
-  NOTEBOOK_SORT_OPTIONS,
   buildNotebookTree,
+  getNotebookSortOptions,
   getNotebookSortComparator,
   hasEdgeEverDragData,
   readNotebookSortPreference,
@@ -77,34 +78,38 @@ const SidebarTrashNavButton = ({
   active?: boolean;
   onOpenTrash: () => void;
   onEmptyTrash: () => void;
-}) => (
-  <div className="group relative">
-    <button
-      className={cn(
-        "flex h-9 w-full items-center gap-3 rounded-md px-3 pr-16 text-left text-sm font-medium leading-none transition-all duration-200",
-        active ? "bg-slate-100 text-slate-950" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
-      )}
-      type="button"
-      aria-current={active ? "page" : undefined}
-      onClick={onOpenTrash}
-    >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-        <Trash2 className="h-4 w-4" />
-      </span>
-      <span className="min-w-0 flex-1 truncate">回收站</span>
-    </button>
-    <button
-      className="pointer-events-none absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center gap-1 rounded-md px-2 text-xs font-medium text-rose-700 opacity-0 transition-all duration-200 hover:bg-rose-50 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/70 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
-      type="button"
-      title="清空回收站"
-      aria-label="清空回收站"
-      onClick={onEmptyTrash}
-    >
-      <Trash2 className="h-3.5 w-3.5" />
-      清空
-    </button>
-  </div>
-);
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="group relative">
+      <button
+        className={cn(
+          "flex h-9 w-full items-center gap-3 rounded-md px-3 pr-16 text-left text-sm font-medium leading-none transition-all duration-200",
+          active ? "bg-slate-100 text-slate-950" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+        )}
+        type="button"
+        aria-current={active ? "page" : undefined}
+        onClick={onOpenTrash}
+      >
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+          <Trash2 className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1 truncate">{t("notebookPane.trash")}</span>
+      </button>
+      <button
+        className="pointer-events-none absolute right-1.5 top-1/2 flex h-7 -translate-y-1/2 items-center gap-1 rounded-md px-2 text-xs font-medium text-rose-700 opacity-0 transition-all duration-200 hover:bg-rose-50 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/70 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+        type="button"
+        title={t("notebookPane.emptyTrash")}
+        aria-label={t("notebookPane.emptyTrash")}
+        onClick={onEmptyTrash}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        {t("notebookPane.empty")}
+      </button>
+    </div>
+  );
+};
 
 const SidebarSectionLabel = ({ icon, label }: { icon: ReactNode; label: string }) => (
   <div className="flex h-9 items-center gap-3 px-3 text-sm font-medium leading-none text-slate-600">
@@ -113,28 +118,28 @@ const SidebarSectionLabel = ({ icon, label }: { icon: ReactNode; label: string }
   </div>
 );
 
-const getSyncStatusLabel = (summary: SyncQueueSummary, isOnline: boolean, isSyncing: boolean) => {
+const getSyncStatusLabel = (summary: SyncQueueSummary, isOnline: boolean, isSyncing: boolean, t: ReturnType<typeof useTranslation>["t"]) => {
   if (!isOnline) {
-    return summary.total > 0 ? `离线，${summary.total} 项待同步` : "离线";
+    return summary.total > 0 ? t("notebookPane.sync.offlineWithPending", { count: summary.total }) : t("notebookPane.sync.offline");
   }
 
   if (isSyncing || summary.syncing > 0) {
-    return "同步中";
+    return t("notebookPane.sync.syncing");
   }
 
   if (summary.conflict > 0) {
-    return `${summary.conflict} 项同步冲突`;
+    return t("notebookPane.sync.conflicts", { count: summary.conflict });
   }
 
   if (summary.error > 0) {
-    return `${summary.error} 项等待重试`;
+    return t("notebookPane.sync.retry", { count: summary.error });
   }
 
   if (summary.pending > 0) {
-    return `${summary.pending} 项待同步`;
+    return t("notebookPane.sync.pending", { count: summary.pending });
   }
 
-  return "已同步";
+  return t("notebookPane.sync.synced");
 };
 
 const SyncStatusBar = ({
@@ -148,8 +153,9 @@ const SyncStatusBar = ({
   isSyncing: boolean;
   onSyncNow: () => void;
 }) => {
+  const { t } = useTranslation();
   const hasQueuedWork = summary.total > 0;
-  const label = getSyncStatusLabel(summary, isOnline, isSyncing);
+  const label = getSyncStatusLabel(summary, isOnline, isSyncing, t);
   const statusClassName = !isOnline
     ? "border-slate-200 bg-slate-50 text-slate-600"
     : summary.conflict > 0
@@ -174,8 +180,8 @@ const SyncStatusBar = ({
         <button
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:bg-white/70 disabled:opacity-50 transition-colors"
           type="button"
-          title="立即同步"
-          aria-label="立即同步"
+          title={t("notebookPane.syncNow")}
+          aria-label={t("notebookPane.syncNow")}
           disabled={!isOnline || isSyncing}
           onClick={onSyncNow}
         >
@@ -243,6 +249,7 @@ export const NotebookPane = ({
   onLogout: () => void;
   isLoggingOut: boolean;
 }) => {
+  const { t } = useTranslation();
   const notebookScrollRef = useRef<HTMLDivElement | null>(null);
   const notebookDragScrollFrameRef = useRef<number | null>(null);
   const [expandSiblingsRequest, setExpandSiblingsRequest] = useState<{ parentId: string | null; token: number } | null>(null);
@@ -309,9 +316,10 @@ export const NotebookPane = ({
   });
 
   const notebooks = notebooksQuery.data?.notebooks ?? [];
+  const notebookSortOptions = useMemo(() => getNotebookSortOptions(t), [t]);
   const tree = useMemo(() => buildNotebookTree(notebooks, getNotebookSortComparator(notebookSortMode)), [notebooks, notebookSortMode]);
   const isLoading = notebooksQuery.isLoading;
-  const activeNotebookSortLabel = NOTEBOOK_SORT_OPTIONS.find((option) => option.value === notebookSortMode)?.label ?? "名称";
+  const activeNotebookSortLabel = notebookSortOptions.find((option) => option.value === notebookSortMode)?.label ?? t("options.notebookSort.nameAsc");
 
   useEffect(() => {
     writeNotebookSortPreference(notebookSortMode);
@@ -335,15 +343,15 @@ export const NotebookPane = ({
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-[calc(4rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200 px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:pb-0 lg:pt-0">
         <div>
-          <div className="text-base font-semibold tracking-normal lg:hidden">笔记本</div>
+          <div className="text-base font-semibold tracking-normal lg:hidden">{t("notebookPane.notebooks")}</div>
           <div className="hidden text-base font-semibold tracking-normal lg:block">EdgeEver</div>
-          <div className="text-xs text-slate-500">{user?.username ?? "边缘笔记工作区"}</div>
+          <div className="text-xs text-slate-500">{user?.username ?? t("notebookPane.workspaceFallback")}</div>
         </div>
         <div className="flex items-center gap-1">
-          <Button className="lg:hidden" size="icon" variant="ghost" title="返回笔记列表" aria-label="返回笔记列表" onClick={onBackToList}>
+          <Button className="lg:hidden" size="icon" variant="ghost" title={t("notebookPane.backToList")} aria-label={t("notebookPane.backToList")} onClick={onBackToList}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button className="lg:hidden" size="icon" variant="ghost" title="新建笔记本" aria-label="新建笔记本" onClick={() => onCreateNotebook(null)}>
+          <Button className="lg:hidden" size="icon" variant="ghost" title={t("notebookPane.newNotebook")} aria-label={t("notebookPane.newNotebook")} onClick={() => onCreateNotebook(null)}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -365,34 +373,34 @@ export const NotebookPane = ({
           <button
             className="flex h-14 min-w-0 flex-1 items-center gap-3 px-3 text-left transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
-            title="新建笔记"
+            title={t("notebookPane.newMemo")}
             onClick={onCreateMemo}
             disabled={!canCreateMemo || isCreatingMemo}
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_8px_18px_rgb(var(--brand-green-rgb)/0.28)] transition-transform duration-200 group-hover:scale-105">
               <Plus className="h-6 w-6" />
             </span>
-            <span className="min-w-0 truncate text-sm font-semibold text-slate-950">新建笔记</span>
+            <span className="min-w-0 truncate text-sm font-semibold text-slate-950">{t("notebookPane.newMemo")}</span>
           </button>
         </div>
 
-        <nav className="mb-3 space-y-1" aria-label="笔记入口">
+        <nav className="mb-3 space-y-1" aria-label={t("notebookPane.entries")}>
           <SidebarNavButton
             active={view === "notebook" && selectedNotebookId === null}
             icon={<LayoutList className="h-4 w-4" />}
-            label="全部笔记"
+            label={t("notebookPane.allMemos")}
             onClick={onBackToList}
           />
         </nav>
 
         <div className="group mb-2 flex items-center justify-between gap-2">
-          <SidebarSectionLabel icon={<NotebookIcon className="h-4 w-4" />} label="笔记本" />
+          <SidebarSectionLabel icon={<NotebookIcon className="h-4 w-4" />} label={t("notebookPane.notebooks")} />
           <div className="flex items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
             <button
               className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
               type="button"
-              title="新建笔记本"
-              aria-label="新建笔记本"
+              title={t("notebookPane.newNotebook")}
+              aria-label={t("notebookPane.newNotebook")}
               onClick={() => onCreateNotebook(null)}
             >
               <BookPlus className="h-3.5 w-3.5" />
@@ -402,14 +410,14 @@ export const NotebookPane = ({
                 <button
                   className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                   type="button"
-                  title={`笔记本排序：${activeNotebookSortLabel}`}
-                  aria-label={`笔记本排序：${activeNotebookSortLabel}`}
+                  title={t("notebookPane.sortTitle", { label: activeNotebookSortLabel })}
+                  aria-label={t("notebookPane.sortTitle", { label: activeNotebookSortLabel })}
                 >
                   <ArrowDownWideNarrow className="h-3.5 w-3.5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-36">
-                {NOTEBOOK_SORT_OPTIONS.map((option) => (
+                {notebookSortOptions.map((option) => (
                   <DropdownMenuCheckboxItem
                     key={option.value}
                     checked={notebookSortMode === option.value}
@@ -424,7 +432,7 @@ export const NotebookPane = ({
         </div>
 
         {isLoading ? (
-          <div className="mb-4 px-2 py-3 text-sm text-slate-500">加载中</div>
+          <div className="mb-4 px-2 py-3 text-sm text-slate-500">{t("notebookPane.loading")}</div>
         ) : (
           <div className="mb-4 space-y-1" data-notebook-tree>
             {tree.map((node) => (
@@ -447,9 +455,9 @@ export const NotebookPane = ({
           </div>
         )}
 
-        <nav className="space-y-1 border-t border-slate-100 pt-3" aria-label="辅助入口">
-          <SidebarNavButton icon={<Tags className="h-4 w-4" />} label="标签" onClick={onOpenTags} />
-          <SidebarNavButton icon={<Archive className="h-4 w-4" />} label="附件" onClick={onOpenAssets} />
+        <nav className="space-y-1 border-t border-slate-100 pt-3" aria-label={t("notebookPane.secondaryEntries")}>
+          <SidebarNavButton icon={<Tags className="h-4 w-4" />} label={t("mobileSheets.tags")} onClick={onOpenTags} />
+          <SidebarNavButton icon={<Archive className="h-4 w-4" />} label={t("mobileSheets.assets")} onClick={onOpenAssets} />
           <SidebarTrashNavButton active={view === "trash"} onOpenTrash={onOpenTrash} onEmptyTrash={onEmptyTrash} />
         </nav>
       </div>
@@ -460,13 +468,13 @@ export const NotebookPane = ({
             onClick={onOpenSettings}
             className="flex h-8 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium leading-none text-slate-700 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
             type="button"
-            title="个人中心"
-            aria-label="个人中心"
+            title={t("notebookPane.profile")}
+            aria-label={t("notebookPane.profile")}
           >
             <span className="flex h-4 w-4 shrink-0 items-center justify-center">
               <CircleUserRound className="h-4 w-4" />
             </span>
-            <span className="min-w-0 flex-1 truncate">个人中心</span>
+            <span className="min-w-0 flex-1 truncate">{t("notebookPane.profile")}</span>
           </button>
         </div>
       </footer>

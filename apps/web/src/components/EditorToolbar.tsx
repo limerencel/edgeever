@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Editor } from "@tiptap/react";
+import { useTranslation } from "react-i18next";
 import {
   Undo2,
   Redo2,
@@ -82,6 +83,7 @@ const toggleCodeBlock = (editor: Editor) => {
 };
 
 export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; readOnly: boolean }) => {
+  const { t } = useTranslation();
   const editorReady = isToolbarEditorReady(editor);
   const disabled = readOnly || !editorReady;
   const blockValue = getActiveBlockValue(editor);
@@ -154,7 +156,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
         <div
           className="flex min-h-12 items-center gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden"
           role="toolbar"
-          aria-label="编辑器工具栏"
+          aria-label={t("editorToolbar.toolbar")}
         >
           <Select
             value={blockValue}
@@ -162,26 +164,26 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             onValueChange={(value) => setBlock(value)}
           >
             <SelectTrigger className="h-8 w-20 shrink-0 whitespace-nowrap border-slate-200 bg-white text-xs text-slate-800 [&>span]:truncate [&>span]:whitespace-nowrap">
-              <SelectValue placeholder="正文" />
+              <SelectValue placeholder={t("editorToolbar.paragraph")} />
             </SelectTrigger>
             <SelectContent className="bg-white border border-slate-200 rounded-md py-1 shadow-md">
-              <SelectItem value="paragraph">正文</SelectItem>
-              <SelectItem value="heading-1">标题 1</SelectItem>
-              <SelectItem value="heading-2">标题 2</SelectItem>
-              <SelectItem value="heading-3">标题 3</SelectItem>
+              <SelectItem value="paragraph">{t("editorToolbar.paragraph")}</SelectItem>
+              <SelectItem value="heading-1">{t("editorToolbar.heading1")}</SelectItem>
+              <SelectItem value="heading-2">{t("editorToolbar.heading2")}</SelectItem>
+              <SelectItem value="heading-3">{t("editorToolbar.heading3")}</SelectItem>
             </SelectContent>
           </Select>
 
           <ToolbarDivider />
           <EditorToolbarButton
-            title="撤销"
+            title={t("editorToolbar.undo")}
             disabled={!canRun((current) => current.can().chain().focus().undo().run())}
             onClick={() => run((current) => current.chain().focus().undo().run())}
           >
             <Undo2 className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="重做"
+            title={t("editorToolbar.redo")}
             disabled={!canRun((current) => current.can().chain().focus().redo().run())}
             onClick={() => run((current) => current.chain().focus().redo().run())}
           >
@@ -190,7 +192,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
 
           <ToolbarDivider />
           <EditorToolbarButton
-            title="加粗"
+            title={t("editorToolbar.bold")}
             active={isActive("bold")}
             disabled={!canRun((current) => current.can().chain().focus().toggleBold().run())}
             onClick={() => run((current) => current.chain().focus().toggleBold().run())}
@@ -198,7 +200,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <Bold className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="斜体"
+            title={t("editorToolbar.italic")}
             active={isActive("italic")}
             disabled={!canRun((current) => current.can().chain().focus().toggleItalic().run())}
             onClick={() => run((current) => current.chain().focus().toggleItalic().run())}
@@ -206,7 +208,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <Italic className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="删除线"
+            title={t("editorToolbar.strike")}
             active={isActive("strike")}
             disabled={!canRun((current) => current.can().chain().focus().toggleStrike().run())}
             onClick={() => run((current) => current.chain().focus().toggleStrike().run())}
@@ -214,7 +216,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <Strikethrough className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="行内代码"
+            title={t("editorToolbar.inlineCode")}
             active={isActive("code")}
             disabled={!canRun((current) => current.can().chain().focus().toggleCode().run())}
             onClick={() => run((current) => current.chain().focus().toggleCode().run())}
@@ -224,7 +226,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
 
           <ToolbarDivider />
           <EditorToolbarButton
-            title="无序列表"
+            title={t("editorToolbar.bulletList")}
             active={isActive("bulletList")}
             disabled={disabled}
             onClick={() => run((current) => current.chain().focus().toggleBulletList().run())}
@@ -232,7 +234,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <List className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="有序列表"
+            title={t("editorToolbar.orderedList")}
             active={isActive("orderedList")}
             disabled={disabled}
             onClick={() => run((current) => current.chain().focus().toggleOrderedList().run())}
@@ -240,7 +242,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <ListOrdered className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="引用"
+            title={t("editorToolbar.quote")}
             active={isActive("blockquote")}
             disabled={disabled}
             onClick={() => run((current) => current.chain().focus().toggleBlockquote().run())}
@@ -248,7 +250,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <Quote className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="代码块"
+            title={t("editorToolbar.codeBlock")}
             active={isActive("codeBlock")}
             disabled={disabled}
             onClick={() => run(toggleCodeBlock)}
@@ -256,7 +258,7 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
             <SquareCode className="h-4 w-4" />
           </EditorToolbarButton>
           <EditorToolbarButton
-            title="分割线"
+            title={t("editorToolbar.horizontalRule")}
             disabled={disabled}
             onClick={() => run((current) => current.chain().focus().setHorizontalRule().run())}
           >

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, RefreshCw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -50,30 +51,16 @@ const watchDisplayMode = (onChange: () => void) => {
   };
 };
 
-const noticeCopy: Record<PwaUpdateNoticeKind, { title: string; description: string }> = {
-  checking: {
-    title: "发现新版本",
-    description: "正在应用更新，稍后会自动刷新。",
-  },
-  updated: {
-    title: "EdgeEver 已更新",
-    description: "当前应用已是最新版本。",
-  },
-  "reload-required": {
-    title: "新版本已就绪",
-    description: "刷新后即可使用最新功能。",
-  },
-};
-
-const getNoticeDescription = (notice: Notice, fallbackDescription: string) => {
+const getNoticeDescription = (notice: Notice, fallbackDescription: string, t: ReturnType<typeof useTranslation>["t"]) => {
   if (notice.kind === "updated" && notice.buildLabel) {
-    return `当前应用已是最新版本（${notice.buildLabel}）。`;
+    return t("pwa.latestWithBuild", { buildLabel: notice.buildLabel });
   }
 
   return fallbackDescription;
 };
 
 export const PwaUpdateNotice = () => {
+  const { t } = useTranslation();
   const [displayMode, setDisplayMode] = useState(() => getDisplayMode());
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -114,7 +101,25 @@ export const PwaUpdateNotice = () => {
     return () => window.clearTimeout(timeout);
   }, [notice]);
 
-  const copy = useMemo(() => (notice ? noticeCopy[notice.kind] : null), [notice]);
+  const noticeCopy = useMemo<Record<PwaUpdateNoticeKind, { title: string; description: string }>>(
+    () => ({
+      checking: {
+        title: t("pwa.checkingTitle"),
+        description: t("pwa.checkingDescription"),
+      },
+      updated: {
+        title: t("pwa.appliedTitle"),
+        description: t("pwa.appliedDescription"),
+      },
+      "reload-required": {
+        title: t("pwa.readyTitle"),
+        description: t("pwa.readyDescription"),
+      },
+    }),
+    [t]
+  );
+
+  const copy = useMemo(() => (notice ? noticeCopy[notice.kind] : null), [notice, noticeCopy]);
 
   if (!displayMode.visible || !notice || !copy) {
     return null;
@@ -145,17 +150,17 @@ export const PwaUpdateNotice = () => {
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold leading-5">{copy.title}</div>
-          <div className="mt-0.5 text-xs leading-5 text-slate-500">{getNoticeDescription(notice, copy.description)}</div>
+          <div className="mt-0.5 text-xs leading-5 text-slate-500">{getNoticeDescription(notice, copy.description, t)}</div>
           {isReloadRequired ? (
             <Button className="mt-2" size="sm" variant="solid" onClick={() => window.location.reload()}>
-              立即刷新
+              {t("pwa.refreshNow")}
             </Button>
           ) : null}
         </div>
         <button
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           type="button"
-          aria-label="关闭更新通知"
+          aria-label={t("pwa.closeNotice")}
           onClick={() => setNotice(null)}
         >
           <X className="h-4 w-4" />

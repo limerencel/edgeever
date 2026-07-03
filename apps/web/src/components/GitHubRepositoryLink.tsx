@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 const GITHUB_REPOSITORY_URL = "https://github.com/msh01/edgeever";
@@ -17,22 +18,27 @@ export const GitHubRepositoryLink = ({
   children,
   className,
   iconClassName,
-  title = "GitHub 仓库",
+  title,
 }: {
   children?: ReactNode;
   className?: string;
   iconClassName?: string;
   title?: string;
-}) => (
-  <a
-    className={cn("inline-flex items-center gap-2", className)}
-    href={GITHUB_REPOSITORY_URL}
-    target="_blank"
-    rel="noopener noreferrer"
-    title={title}
-    aria-label={children ? undefined : title}
-  >
-    <GitHubMark className={cn("h-4 w-4 shrink-0", iconClassName)} />
-    {children}
-  </a>
-);
+}) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t("common.githubRepository");
+
+  return (
+    <a
+      className={cn("inline-flex items-center gap-2", className)}
+      href={GITHUB_REPOSITORY_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={resolvedTitle}
+      aria-label={children ? undefined : resolvedTitle}
+    >
+      <GitHubMark className={cn("h-4 w-4 shrink-0", iconClassName)} />
+      {children}
+    </a>
+  );
+};

@@ -1,8 +1,66 @@
 ---
 import { Icon } from "astro-icon/components";
 
-const promptText =
-  "请先 Fork EdgeEver 仓库：https://github.com/msh01/edgeever\n\nFork 完成后，请使用 Fork 后的仓库把 EdgeEver 安装部署到 Cloudflare 上，并为 Fork 仓库配置自动同步上游，以便后续获取最新产品特性。";
+const { locale = "zh-CN" } = Astro.props;
+const isEnglish = locale === "en-US";
+
+const copy = isEnglish
+  ? {
+      manual: "Manual install",
+      agent: "Install with AI Agent",
+      agentIntro:
+        "Copy the prompt below to your AI assistant (Claude Code, Codex, Cursor, Trae, and similar tools). It can complete the installation for you.",
+      promptLabel: "Prompt",
+      copyPrompt: "Copy prompt",
+      copying: "Copying...",
+      copied: "Copied",
+      copyFailed: "Copy failed",
+      manualIntro:
+        "Manual installation is best if you are comfortable with Cloudflare and the command line. Fork the repository first, then deploy from your own fork.",
+      step1: "Step 1",
+      step1Title: "Fork the official repository",
+      step2: "Step 2",
+      step2Title: "Clone your fork",
+      step3: "Step 3",
+      step3Title: "Deploy with the automated helper commands",
+      manualCloudflare: "Create Cloudflare resources manually",
+      manualHint: "Put the database_id returned by the D1 command and your password hash into your local .env.local file.",
+      promptText:
+        "Please fork the EdgeEver repository first: https://github.com/msh01/edgeever\n\nAfter the fork is ready, use the forked repository to install and deploy EdgeEver to Cloudflare, and configure automatic upstream sync for the fork so future product updates can be pulled in.",
+      forkUrl: "https://github.com/msh01/edgeever",
+      cloneCommand: "git clone <your fork repository URL>\ncd edgeever",
+      deployCommand:
+        "cp .env.local.example .env.local\nbun install\nEDGE_EVER_PASSWORD='<your password>' bun run deploy:setup\nbun run deploy:doctor\nbun run deploy",
+      manualCommand:
+        "cp .env.local.example .env.local\nbun install\nbunx wrangler d1 create edgeever\nbunx wrangler r2 bucket create edgeever-resources\nbun run auth:hash -- <your password>\nbun run deploy",
+    }
+  : {
+      manual: "手动安装",
+      agent: "通过 AI Agent 安装",
+      agentIntro: "将下方提示词复制给你的 AI 助手（Claude Code、Codex、Cursor、Trae 等），它会自动完成安装。",
+      promptLabel: "提示词",
+      copyPrompt: "复制提示词",
+      copying: "复制中...",
+      copied: "已复制",
+      copyFailed: "复制失败",
+      manualIntro: "手动安装适合熟悉 Cloudflare 与命令行的用户。先 Fork 仓库，再从你自己的 Fork 仓库部署。",
+      step1: "第一步",
+      step1Title: "Fork 官方仓库",
+      step2: "第二步",
+      step2Title: "Clone 你的 Fork 仓库",
+      step3: "第三步",
+      step3Title: "使用自动化辅助命令部署",
+      manualCloudflare: "手动创建 Cloudflare 资源",
+      manualHint: "把 D1 创建命令返回的 database_id 和密码 hash 填入本机 .env.local。",
+      promptText:
+        "请先 Fork EdgeEver 仓库：https://github.com/msh01/edgeever\n\nFork 完成后，请使用 Fork 后的仓库把 EdgeEver 安装部署到 Cloudflare 上，并为 Fork 仓库配置自动同步上游，以便后续获取最新产品特性。",
+      forkUrl: "https://github.com/msh01/edgeever",
+      cloneCommand: "git clone <你的 Fork 仓库 URL>\ncd edgeever",
+      deployCommand:
+        "cp .env.local.example .env.local\nbun install\nEDGE_EVER_PASSWORD='<你的密码>' bun run deploy:setup\nbun run deploy:doctor\nbun run deploy",
+      manualCommand:
+        "cp .env.local.example .env.local\nbun install\nbunx wrangler d1 create edgeever\nbunx wrangler r2 bucket create edgeever-resources\nbun run auth:hash -- <你的密码>\nbun run deploy",
+    };
 ---
 
 <section class="not-prose relative left-1/2 my-10 w-[min(92vw,960px)] -translate-x-1/2" data-agent-install-tabs>
@@ -12,80 +70,74 @@ const promptText =
       type="button"
       data-tab-target="manual"
       aria-selected="false">
-      手动安装
+      {copy.manual}
     </button>
     <button
       class="agent-install-tab active px-2 pb-4 text-brand relative transition"
       type="button"
       data-tab-target="agent"
       aria-selected="true">
-      通过 AI Agent 安装
+      {copy.agent}
     </button>
   </div>
 
   <div class="mt-8 overflow-hidden rounded-[28px] bg-slate-100 px-6 py-8 sm:px-10 md:px-14">
     <div class="agent-install-panel" data-tab-panel="agent">
       <p class="mx-auto mb-8 max-w-3xl text-center text-lg leading-9 text-slate-600">
-        将下方提示词复制给你的 AI 助手（Claude Code、Codex、Cursor、Trae 等），它会自动完成安装。
+        {copy.agentIntro}
       </p>
 
       <div class="mx-auto max-w-3xl rounded-2xl bg-white p-6 shadow-sm">
-        <p class="text-sm font-medium text-slate-400">提示词</p>
-        <pre class="mt-4 whitespace-pre-wrap break-words font-mono text-base leading-8 text-slate-900">{promptText}</pre>
+        <p class="text-sm font-medium text-slate-400">{copy.promptLabel}</p>
+        <pre class="mt-4 whitespace-pre-wrap break-words font-mono text-base leading-8 text-slate-900">{copy.promptText}</pre>
       </div>
 
       <div class="mt-8 flex justify-center">
         <button
           class="agent-install-copy inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3 text-base font-semibold text-white shadow-[0_14px_30px_-18px_rgb(var(--edgeever-brand-rgb)/0.85)] transition hover:-translate-y-0.5 hover:bg-brand-hover"
           type="button"
-          data-copy-text={promptText}>
+          data-copy-text={copy.promptText}
+          data-copy-default={copy.copyPrompt}
+          data-copy-copying={copy.copying}
+          data-copy-copied={copy.copied}
+          data-copy-failed={copy.copyFailed}>
           <Icon class="h-5 w-5" name="bx:bx-copy" />
-          <span data-copy-label>复制提示词</span>
+          <span data-copy-label>{copy.copyPrompt}</span>
         </button>
       </div>
     </div>
 
     <div class="agent-install-panel hidden" data-tab-panel="manual">
       <p class="mx-auto max-w-3xl text-center text-lg leading-9 text-slate-600">
-        手动安装适合熟悉 Cloudflare 与命令行的用户。先 Fork 仓库，再从你自己的 Fork 仓库部署。
+        {copy.manualIntro}
       </p>
 
       <div class="mx-auto mt-8 grid max-w-3xl gap-4">
         <div class="rounded-2xl bg-white p-6 shadow-sm">
-          <p class="text-sm font-semibold text-brand-text">第一步</p>
-          <h3 class="mt-2 text-xl font-bold text-slate-900">Fork 官方仓库</h3>
-          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">https://github.com/msh01/edgeever</pre>
+          <p class="text-sm font-semibold text-brand-text">{copy.step1}</p>
+          <h3 class="mt-2 text-xl font-bold text-slate-900">{copy.step1Title}</h3>
+          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">{copy.forkUrl}</pre>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm">
-          <p class="text-sm font-semibold text-brand-text">第二步</p>
-          <h3 class="mt-2 text-xl font-bold text-slate-900">Clone 你的 Fork 仓库</h3>
-          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">git clone &lt;你的 Fork 仓库 URL&gt;
-cd edgeever</pre>
+          <p class="text-sm font-semibold text-brand-text">{copy.step2}</p>
+          <h3 class="mt-2 text-xl font-bold text-slate-900">{copy.step2Title}</h3>
+          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">{copy.cloneCommand}</pre>
         </div>
 
         <div class="rounded-2xl bg-white p-6 shadow-sm">
-          <p class="text-sm font-semibold text-brand-text">第三步</p>
-          <h3 class="mt-2 text-xl font-bold text-slate-900">使用自动化辅助命令部署</h3>
-          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">cp .env.local.example .env.local
-bun install
-EDGE_EVER_PASSWORD='&lt;你的密码&gt;' bun run deploy:setup
-bun run deploy:doctor
-bun run deploy</pre>
+          <p class="text-sm font-semibold text-brand-text">{copy.step3}</p>
+          <h3 class="mt-2 text-xl font-bold text-slate-900">{copy.step3Title}</h3>
+          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">{copy.deployCommand}</pre>
         </div>
 
         <details class="rounded-2xl bg-white p-6 shadow-sm">
           <summary class="cursor-pointer text-base font-semibold text-slate-900">
-            手动创建 Cloudflare 资源
+            {copy.manualCloudflare}
           </summary>
-          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">cp .env.local.example .env.local
-bun install
-bunx wrangler d1 create edgeever
-bunx wrangler r2 bucket create edgeever-resources
-bun run auth:hash -- &lt;你的密码&gt;
-bun run deploy</pre>
+          <pre class="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 font-mono text-sm leading-7 text-slate-800">{copy.manualCommand}</pre>
           <p class="mt-4 text-sm leading-6 text-slate-500">
-            把 D1 创建命令返回的 database_id 和密码 hash 填入本机 .env.local。
+            {copy.manualHint}
           </p>
         </details>
       </div>
@@ -149,16 +201,21 @@ bun run deploy</pre>
           const text = button.getAttribute("data-copy-text") || "";
           const label = button.querySelector("[data-copy-label]");
 
-          if (label) label.textContent = "复制中...";
+          const defaultLabel = button.getAttribute("data-copy-default") || "Copy";
+          const copyingLabel = button.getAttribute("data-copy-copying") || "Copying...";
+          const copiedLabel = button.getAttribute("data-copy-copied") || "Copied";
+          const failedLabel = button.getAttribute("data-copy-failed") || "Copy failed";
+
+          if (label) label.textContent = copyingLabel;
 
           try {
             await copyTextToClipboard(text);
-            if (label) label.textContent = "已复制";
+            if (label) label.textContent = copiedLabel;
             window.setTimeout(() => {
-              if (label) label.textContent = "复制提示词";
+              if (label) label.textContent = defaultLabel;
             }, 1600);
           } catch {
-            if (label) label.textContent = "复制失败";
+            if (label) label.textContent = failedLabel;
           }
         });
       });

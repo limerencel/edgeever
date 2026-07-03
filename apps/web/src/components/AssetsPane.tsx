@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useDropzone } from "react-dropzone";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
@@ -117,6 +118,7 @@ interface AssetsPaneProps {
 }
 
 export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,20 +158,20 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
         let count = 0;
         for (const file of files) {
           count++;
-          setUploadProgress(`正在上传第 ${count}/${files.length} 个文件...`);
+          setUploadProgress(t("assets.uploadNth", { current: count, total: files.length }));
 
           const isImage = file.type.startsWith("image/");
           // Compress images if enabled
           const shouldCompress = isImage;
           if (shouldCompress) {
             setUploadState("compressing");
-            setUploadProgress(`正在压缩: ${file.name}`);
+            setUploadProgress(t("assets.compressingFile", { filename: file.name }));
           }
 
           const uploadFile = shouldCompress ? (await compressImageForUpload(file)).file : file;
 
           setUploadState("uploading");
-          setUploadProgress(`正在上传: ${uploadFile.name}`);
+          setUploadProgress(t("assets.uploadingFile", { filename: uploadFile.name }));
 
           await api.uploadMemoResource(targetMemoId, uploadFile);
         }
@@ -182,7 +184,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
         setTimeout(() => setUploadState("idle"), 3000);
       }
     },
-    [activeMemo, queryClient]
+    [activeMemo, queryClient, t]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -245,6 +247,11 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
     }
   };
 
+  const activeMemoTitle = activeMemo?.title || activeMemo?.excerpt || t("assets.unnamedMemo");
+  const activeMemoShortTitle = activeMemo?.title || activeMemo?.excerpt || t("assets.unnamedShort");
+  const getResourceMemoSource = (resource: { memoDeleted: boolean; memoTitle: string | null; memoExcerpt: string | null; memoId: string }) =>
+    resource.memoDeleted ? t("assets.deletedMemo") : resource.memoTitle || resource.memoExcerpt || resource.memoId;
+
   return (
     <div
       {...getRootProps()}
@@ -258,8 +265,8 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
           <Button
             size="icon"
             variant="ghost"
-            title="返回"
-            aria-label="返回"
+            title={t("common.back")}
+            aria-label={t("common.back")}
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100"
           >
@@ -268,7 +275,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-base font-bold text-slate-900 leading-tight">
               <Archive className="h-4.5 w-4.5 text-emerald-700" />
-              附件管理
+              {t("assets.title")}
             </h1>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] font-medium text-slate-400 uppercase tracking-wider">
               <span className="inline-flex items-center gap-1">
@@ -276,9 +283,9 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
                 {formatBytes(summary.totalBytes)}
               </span>
               <span>•</span>
-              <span>{summary.totalCount} 文件</span>
+              <span>{t("assets.fileCount", { count: summary.totalCount })}</span>
               <span>•</span>
-              <span>{summary.imageCount} 图片</span>
+              <span>{t("assets.imageCount", { count: summary.imageCount })}</span>
             </p>
           </div>
         </div>
@@ -298,10 +305,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
                   : "text-slate-500 hover:bg-slate-50 border border-transparent"
               }`}
             >
-              {type === "all" && "全部"}
-              {type === "image" && "图片"}
-              {type === "document" && "文档"}
-              {type === "other" && "其他"}
+              {t(`assets.filters.${type}`)}
             </button>
           ))}
         </div>
@@ -313,7 +317,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="搜索附件名或来源笔记..."
+              placeholder={t("assets.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-8.5 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8.5 pr-8 text-xs text-slate-800 placeholder-slate-400 transition-colors focus:border-emerald-500/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
@@ -332,7 +336,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
           <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5 bg-slate-50/50">
             <button
               onClick={() => setLayoutMode("grid")}
-              title="网格视图"
+              title={t("assets.gridView")}
               className={`rounded-md p-1 transition-colors ${
                 layoutMode === "grid" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
               }`}
@@ -341,7 +345,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
             </button>
             <button
               onClick={() => setLayoutMode("list")}
-              title="列表视图"
+              title={t("assets.listView")}
               className={`rounded-md p-1 transition-colors ${
                 layoutMode === "list" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
               }`}
@@ -356,7 +360,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
       {activeMemo ? (
         <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-50/30 px-6 py-2 shrink-0">
           <p className="truncate text-[11px] font-medium text-emerald-800">
-            📌 当前关联笔记：《{activeMemo.title || activeMemo.excerpt || "未命名笔记"}》
+            {t("assets.activeMemo", { title: activeMemoTitle })}
           </p>
           <div className="flex items-center gap-2">
             <input
@@ -374,12 +378,12 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
               {uploadState === "idle" ? (
                 <>
                   <FileUp className="h-3 w-3" />
-                  上传附件
+                  {t("assets.uploadAttachment")}
                 </>
               ) : (
                 <>
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  处理中...
+                  {t("assets.processing")}
                 </>
               )}
             </button>
@@ -387,7 +391,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
         </div>
       ) : (
         <div className="border-b border-amber-100 bg-amber-50/30 px-6 py-2 text-[11px] font-medium text-amber-800 shrink-0">
-          ⚠️ 提示：在右侧编辑器中打开一篇笔记，即可在此处拖放或上传新文件。
+          {t("assets.noActiveMemoHint")}
         </div>
       )}
 
@@ -397,18 +401,18 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
           {resourcesQuery.isLoading ? (
             <div className="flex flex-col items-center justify-center py-32 text-slate-400">
               <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-2" />
-              <span className="text-xs font-medium">正在加载附件列表...</span>
+              <span className="text-xs font-medium">{t("assets.loading")}</span>
             </div>
           ) : filteredResources.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-24 text-center">
               <Archive className="h-10 w-10 text-slate-350 mb-3 stroke-[1.5]" />
               <p className="text-sm font-semibold text-slate-500">
-                {searchQuery || filterType !== "all" ? "未找到匹配附件" : "暂无附件"}
+                {searchQuery || filterType !== "all" ? t("assets.noMatches") : t("assets.empty")}
               </p>
               <p className="mt-1 text-xs text-slate-400">
                 {searchQuery || filterType !== "all"
-                  ? "请尝试更改搜索词或分类过滤器"
-                  : "拖拽文件到这里，或在上方上传文件"}
+                  ? t("assets.noMatchesDescription")
+                  : t("assets.emptyDescription")}
               </p>
             </div>
           ) : layoutMode === "grid" ? (
@@ -448,7 +452,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
                     {/* Hover detail overlay */}
                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex items-center justify-center">
                       <span className="rounded bg-white/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-800 shadow flex items-center gap-1">
-                        {resource.kind === "image" ? "大图预览" : "下载/打开"}
+                        {resource.kind === "image" ? t("assets.previewImage") : t("assets.downloadOpen")}
                         <ExternalLink className="h-3 w-3" />
                       </span>
                     </div>
@@ -469,12 +473,12 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
                     <span
                       title={
                         resource.memoDeleted
-                          ? "已删除笔记"
-                          : `来自：${resource.memoTitle || resource.memoExcerpt || resource.memoId}`
+                          ? t("assets.deletedMemo")
+                          : t("assets.fromMemo", { source: resource.memoTitle || resource.memoExcerpt || resource.memoId })
                       }
                       className="mt-1.5 truncate text-[9px] text-slate-400 border-t border-slate-50 pt-1"
                     >
-                      📄 {resource.memoDeleted ? "已删除笔记" : resource.memoTitle || resource.memoExcerpt || "未命名笔记"}
+                      📄 {resource.memoDeleted ? t("assets.deletedMemo") : resource.memoTitle || resource.memoExcerpt || t("assets.unnamedMemo")}
                     </span>
                   </div>
                 </div>
@@ -521,9 +525,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
                       {formatDateTime(resource.createdAt)}
                     </span>
                     <span className="mt-1 block truncate text-[10px] text-slate-500">
-                      来源笔记：{resource.memoDeleted
-                        ? "已删除笔记"
-                        : resource.memoTitle || resource.memoExcerpt || resource.memoId}
+                      {t("assets.sourceMemo", { source: getResourceMemoSource(resource) })}
                     </span>
                   </div>
 
@@ -532,7 +534,7 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
                     href={resource.url}
                     target="_blank"
                     rel="noreferrer"
-                    title="在新窗口打开"
+                    title={t("assets.openInNewWindow")}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-350 hover:bg-slate-50 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-all duration-150"
                   >
                     <ExternalLink className="h-4 w-4" />
@@ -549,10 +551,10 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-900/80 backdrop-blur-sm p-6 text-center text-white transition-all duration-200">
           <div className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-950/40 p-12 flex flex-col items-center max-w-md shadow-2xl">
             <UploadCloud className="h-16 w-16 text-emerald-300 animate-bounce mb-4" />
-            <h3 className="text-lg font-bold">将文件释放于此</h3>
+            <h3 className="text-lg font-bold">{t("assets.dropTitle")}</h3>
             <p className="mt-2 text-sm text-emerald-200 leading-relaxed">
-              文件将上传并附加到当前正在编辑的笔记：
-              <span className="block mt-1 font-bold text-white">《{activeMemo.title || activeMemo.excerpt || "未命名"}》</span>
+              {t("assets.dropDescription")}
+              <span className="block mt-1 font-bold text-white">{activeMemoShortTitle}</span>
             </p>
           </div>
         </div>
@@ -576,13 +578,13 @@ export const AssetsPane = ({ onClose, activeMemo }: AssetsPaneProps) => {
           {uploadState === "success" && (
             <>
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-650 text-xs font-bold font-mono">✓</span>
-              <span className="text-xs font-semibold text-emerald-700">上传成功！</span>
+              <span className="text-xs font-semibold text-emerald-700">{t("assets.uploadSuccess")}</span>
             </>
           )}
           {uploadState === "error" && (
             <>
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-50 text-rose-600 text-xs font-bold font-mono">✕</span>
-              <span className="text-xs font-semibold text-rose-700">上传失败，请稍后重试</span>
+              <span className="text-xs font-semibold text-rose-700">{t("assets.uploadError")}</span>
             </>
           )}
         </div>

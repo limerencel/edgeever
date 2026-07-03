@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Archive, CheckSquare, Folder as NotebookIcon, KeyRound, LayoutList, List, Merge, Star, Tags, Trash2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,18 +19,9 @@ import {
 } from "@/components/ui/drawer";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { MEMO_SORT_OPTIONS, getNotebookMoveOptions } from "@/lib/app-helpers";
+import { getMemoSortOptions, getNotebookMoveOptions } from "@/lib/app-helpers";
 import type { MemoListDensity, MemoSortMode } from "@/lib/app-helpers";
 import type { Notebook } from "@edgeever/shared";
-
-const getSelectionCountLabel = (count: number) => (count > 0 ? `已选择 ${count} 条` : "选择笔记");
-
-const memoListDensityOptions = [
-  { value: "preview" as const, label: "预览列表", icon: <LayoutList className="h-4 w-4" /> },
-  { value: "compact" as const, label: "紧凑列表", icon: <List className="h-4 w-4" /> },
-];
-
-const mobileSortOptions = MEMO_SORT_OPTIONS;
 
 const CheckCircleCheck = ({ className }: { className?: string }) => (
   <svg className={cn("h-4 w-4 fill-current", className)} viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
@@ -97,90 +89,102 @@ export const MobileListActionsSheet = ({
   onOpenTrash: () => void;
   onListDensityChange: (value: MemoListDensity) => void;
   onSortModeChange: (value: MemoSortMode) => void;
-}) => (
-  <Drawer open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-    <DrawerContent className="bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh_-_6.75rem_-_env(safe-area-inset-bottom))] overflow-hidden rounded-md lg:hidden">
-      <header className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
-        <DrawerHeader className="min-w-0 p-0">
-          <DrawerTitle className="truncate">列表选项</DrawerTitle>
-          <DrawerDescription className="truncate">
-            {listTitle} · {listDescription}
-          </DrawerDescription>
-        </DrawerHeader>
-        <Button size="icon" variant="ghost" title="关闭" aria-label="关闭" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </header>
-      <div className="max-h-[calc(100dvh_-_10.25rem_-_env(safe-area-inset-bottom))] overflow-y-auto p-2">
-        {!isSelectionMode && (
-          <>
-            <MobileListActionButton
-              disabled={!canSelectMemos}
-              icon={<CheckSquare className="h-4 w-4" />}
-              label="选择笔记"
-              onClick={onEnterSelectionMode}
-            />
-            <div className="my-2 h-px bg-slate-100" />
-          </>
-        )}
+}) => {
+  const { t } = useTranslation();
+  const memoListDensityOptions = useMemo(
+    () => [
+      { value: "preview" as const, label: t("options.memoDensity.preview"), icon: <LayoutList className="h-4 w-4" /> },
+      { value: "compact" as const, label: t("options.memoDensity.compact"), icon: <List className="h-4 w-4" /> },
+    ],
+    [t]
+  );
+  const mobileSortOptions = useMemo(() => getMemoSortOptions(t), [t]);
 
-        <div className="px-3 py-2 text-xs font-semibold text-slate-400">显示方式</div>
-        <ToggleGroup
-          className="flex-col items-stretch"
-          type="single"
-          value={listDensity}
-          onValueChange={(value) => {
-            if (value) {
-              onListDensityChange(value as MemoListDensity);
-            }
-          }}
-        >
-          {memoListDensityOptions.map((option) => (
-            <ToggleGroupItem
-              key={option.value}
-              className="h-11 w-full justify-start gap-3 rounded-md px-3 text-left text-sm data-[state=on]:bg-emerald-50 data-[state=on]:text-emerald-700"
-              size="default"
-              value={option.value}
-              aria-label={option.label}
-            >
-              <span className={listDensity === option.value ? "text-emerald-500" : "text-slate-500"}>{option.icon}</span>
-              <span className="min-w-0 flex-1 truncate">{option.label}</span>
-              <CheckCircleCheck className={cn("h-4 w-4 shrink-0", listDensity === option.value ? "text-emerald-500" : "text-transparent")} />
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+  return (
+    <Drawer open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DrawerContent className="bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh_-_6.75rem_-_env(safe-area-inset-bottom))] overflow-hidden rounded-md lg:hidden">
+        <header className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
+          <DrawerHeader className="min-w-0 p-0">
+            <DrawerTitle className="truncate">{t("mobileSheets.listOptions")}</DrawerTitle>
+            <DrawerDescription className="truncate">
+              {listTitle} · {listDescription}
+            </DrawerDescription>
+          </DrawerHeader>
+          <Button size="icon" variant="ghost" title={t("common.close")} aria-label={t("common.close")} onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </header>
+        <div className="max-h-[calc(100dvh_-_10.25rem_-_env(safe-area-inset-bottom))] overflow-y-auto p-2">
+          {!isSelectionMode && (
+            <>
+              <MobileListActionButton
+                disabled={!canSelectMemos}
+                icon={<CheckSquare className="h-4 w-4" />}
+                label={t("mobileSheets.selectMemo")}
+                onClick={onEnterSelectionMode}
+              />
+              <div className="my-2 h-px bg-slate-100" />
+            </>
+          )}
 
-        <div className="my-2 h-px bg-slate-100" />
-        <div className="px-3 py-2 text-xs font-semibold text-slate-400">排序方式</div>
-        {mobileSortOptions.map((option) => (
-          <button
-            key={option.value}
-            className={cn(
-              "flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition",
-              sortMode === option.value ? "bg-emerald-50 text-emerald-700" : "text-slate-800 hover:bg-slate-50"
-            )}
-            type="button"
-            aria-pressed={sortMode === option.value}
-            onClick={() => onSortModeChange(option.value)}
+          <div className="px-3 py-2 text-xs font-semibold text-slate-400">{t("mobileSheets.displayMode")}</div>
+          <ToggleGroup
+            className="flex-col items-stretch"
+            type="single"
+            value={listDensity}
+            onValueChange={(value) => {
+              if (value) {
+                onListDensityChange(value as MemoListDensity);
+              }
+            }}
           >
-            <span className="min-w-0 flex-1 truncate">{option.label}</span>
-            <CheckCircleCheck className={cn("h-4 w-4 shrink-0", sortMode === option.value ? "text-emerald-500" : "text-transparent")} />
-          </button>
-        ))}
+            {memoListDensityOptions.map((option) => (
+              <ToggleGroupItem
+                key={option.value}
+                className="h-11 w-full justify-start gap-3 rounded-md px-3 text-left text-sm data-[state=on]:bg-emerald-50 data-[state=on]:text-emerald-700"
+                size="default"
+                value={option.value}
+                aria-label={option.label}
+              >
+                <span className={listDensity === option.value ? "text-emerald-500" : "text-slate-500"}>{option.icon}</span>
+                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                <CheckCircleCheck className={cn("h-4 w-4 shrink-0", listDensity === option.value ? "text-emerald-500" : "text-transparent")} />
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
 
-        <div className="my-2 h-px bg-slate-100" />
-        <MobileListActionButton icon={<Tags className="h-4 w-4" />} label="标签" onClick={onOpenTags} />
-        <MobileListActionButton icon={<Archive className="h-4 w-4" />} label="附件" onClick={onOpenAssets} />
-        {view === "trash" ? (
-          <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label="清空回收站" onClick={onEmptyTrash} />
-        ) : (
-          <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label="回收站" onClick={onOpenTrash} />
-        )}
-        <MobileListActionButton icon={<KeyRound className="h-4 w-4" />} label="MCP Token" onClick={onOpenSettings} />
-      </div>
-    </DrawerContent>
-  </Drawer>
-);
+          <div className="my-2 h-px bg-slate-100" />
+          <div className="px-3 py-2 text-xs font-semibold text-slate-400">{t("mobileSheets.sortMode")}</div>
+          {mobileSortOptions.map((option) => (
+            <button
+              key={option.value}
+              className={cn(
+                "flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition",
+                sortMode === option.value ? "bg-emerald-50 text-emerald-700" : "text-slate-800 hover:bg-slate-50"
+              )}
+              type="button"
+              aria-pressed={sortMode === option.value}
+              onClick={() => onSortModeChange(option.value)}
+            >
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+              <CheckCircleCheck className={cn("h-4 w-4 shrink-0", sortMode === option.value ? "text-emerald-500" : "text-transparent")} />
+            </button>
+          ))}
+
+          <div className="my-2 h-px bg-slate-100" />
+          <MobileListActionButton icon={<Tags className="h-4 w-4" />} label={t("mobileSheets.tags")} onClick={onOpenTags} />
+          <MobileListActionButton icon={<Archive className="h-4 w-4" />} label={t("mobileSheets.assets")} onClick={onOpenAssets} />
+          {view === "trash" ? (
+            <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label={t("mobileSheets.emptyTrash")} onClick={onEmptyTrash} />
+          ) : (
+            <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label={t("mobileSheets.trash")} onClick={onOpenTrash} />
+          )}
+          <MobileListActionButton icon={<KeyRound className="h-4 w-4" />} label="MCP Token" onClick={onOpenSettings} />
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+};
 
 export const MobileMoveSheet = ({
   isMoving,
@@ -197,9 +201,10 @@ export const MobileMoveSheet = ({
   onClose: () => void;
   onMove: (notebookId: string) => void;
 }) => {
+  const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement | null>(null);
   const options = useMemo(() => getNotebookMoveOptions(notebooks), [notebooks]);
-  const selectedCountLabel = getSelectionCountLabel(selectedCount);
+  const selectedCountLabel = selectedCount > 0 ? t("mobileSheets.selectionCount", { count: selectedCount }) : t("mobileSheets.selectMemo");
 
   useEffect(() => {
     window.setTimeout(() => {
@@ -215,17 +220,17 @@ export const MobileMoveSheet = ({
       <DrawerContent className="bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh_-_6.75rem_-_env(safe-area-inset-bottom))] overflow-hidden rounded-md lg:hidden">
         <header className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
           <DrawerHeader className="min-w-0 p-0">
-            <DrawerTitle className="truncate">移动到笔记本</DrawerTitle>
+            <DrawerTitle className="truncate">{t("mobileSheets.moveToNotebook")}</DrawerTitle>
             <DrawerDescription className="truncate">{selectedCountLabel}</DrawerDescription>
           </DrawerHeader>
-          <Button size="icon" variant="ghost" title="关闭" aria-label="关闭" onClick={onClose}>
+          <Button size="icon" variant="ghost" title={t("common.close")} aria-label={t("common.close")} onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </header>
         <Command className="min-h-0 flex-1">
-          <CommandInput placeholder="搜索笔记本" />
+          <CommandInput placeholder={t("mobileSheets.searchNotebook")} />
           <CommandList ref={listRef} className="max-h-[calc(100dvh_-_13.75rem_-_env(safe-area-inset-bottom))] p-2">
-            <CommandEmpty>没有找到笔记本</CommandEmpty>
+            <CommandEmpty>{t("mobileSheets.noNotebookFound")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const selected = option.id === selectedNotebookId;
@@ -240,7 +245,7 @@ export const MobileMoveSheet = ({
                     value={option.id}
                     keywords={[option.name, option.selectLabel, option.slug ?? ""]}
                     data-mobile-move-notebook-id={option.id}
-                    aria-label={selected ? `当前目标：${option.name}` : `移动到 ${option.name}`}
+                    aria-label={selected ? t("mobileSheets.currentTarget", { name: option.name }) : t("mobileSheets.moveTo", { name: option.name })}
                     aria-current={selected ? "page" : undefined}
                     disabled={isMoving}
                     onSelect={() => onMove(option.id)}
@@ -289,15 +294,19 @@ export const MobileSelectionMoreSheet = ({
   onMerge: () => void;
   onPin: () => void;
   onToggleVisibleSelection: () => void;
-}) => (
-  <Drawer open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+}) => {
+  const { t } = useTranslation();
+  const selectedCountLabel = selectedCount > 0 ? t("mobileSheets.selectionCount", { count: selectedCount }) : t("mobileSheets.selectMemo");
+
+  return (
+    <Drawer open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
     <DrawerContent className="bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh_-_6.75rem_-_env(safe-area-inset-bottom))] overflow-hidden rounded-md lg:hidden">
       <header className="flex h-12 items-center justify-between border-b border-slate-200 px-4">
         <DrawerHeader className="min-w-0 p-0">
-          <DrawerTitle className="truncate">批量操作</DrawerTitle>
-          <DrawerDescription className="truncate">{getSelectionCountLabel(selectedCount)}</DrawerDescription>
+          <DrawerTitle className="truncate">{t("mobileSheets.bulkActions")}</DrawerTitle>
+          <DrawerDescription className="truncate">{selectedCountLabel}</DrawerDescription>
         </DrawerHeader>
-        <Button size="icon" variant="ghost" title="关闭" aria-label="关闭" onClick={onClose}>
+        <Button size="icon" variant="ghost" title={t("common.close")} aria-label={t("common.close")} onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </header>
@@ -319,7 +328,7 @@ export const MobileSelectionMoreSheet = ({
         onClick={onMerge}
       >
         <Merge className="h-4 w-4" />
-        合并笔记
+        {t("mobileSheets.mergeMemos")}
       </button>
       <button
         className="flex h-12 w-full items-center gap-3 border-b border-slate-100 px-4 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-100 disabled:hover:bg-transparent"
@@ -334,13 +343,14 @@ export const MobileSelectionMoreSheet = ({
       <button
         className="flex h-12 w-full items-center gap-3 px-4 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50"
         type="button"
-        title="取消选择"
-        aria-label="取消选择"
+        title={t("mobileSheets.clearSelection")}
+        aria-label={t("mobileSheets.clearSelection")}
         onClick={onClearSelection}
       >
         <X className="h-4 w-4" />
-        取消选择
+        {t("mobileSheets.clearSelection")}
       </button>
     </DrawerContent>
-  </Drawer>
-);
+    </Drawer>
+  );
+};

@@ -1,68 +1,33 @@
 ---
 import { Icon } from "astro-icon/components";
+import { getSiteLocale, siteCopy } from "@/i18n";
 
-const features = [
+const locale = getSiteLocale(Astro.url.pathname);
+const featureCopy = siteCopy[locale].features;
+const featureArt = [
   {
-    title: "海量存储，永久免费托管。",
-    summary:
-      "基于 Cloudflare D1 与 R2 提供的免费额度，个人笔记产生的数据量几乎永远用不完。",
     icon: "bx:bx-cloud",
     accent: "storage",
-    points: [
-      "免费额度对个人笔记足够宽裕：短笔记可达 10 万条量级，200KB 图片约可存放 5 万张。",
-      "图片上传前在浏览器本地压缩，常见截图和照片通常减少 50%-90% 体积。",
-      "数据和资源分别落在 D1 与 R2，部署后由你自己的 Cloudflare 账号承载。",
-    ],
   },
   {
-    title: "AI Agent 原生连接",
-    summary:
-      "内置 REST API、OpenAPI schema 与 Remote MCP endpoint，让 AI 助手安全地读取、创建和整理笔记。",
     icon: "bx:bxs-bot",
     accent: "agent",
-    points: [
-      "在应用内生成 MCP Token，就能把 EdgeEver 接入 Codex、Claude Code、Antigravity 等工具。",
-      "适合做灵感归纳、自动打标签、知识图谱整理和跨笔记检索。",
-      "API 与 Agent 能力围绕你的私有实例工作，不依赖封闭笔记平台。",
-    ],
   },
   {
-    title: "经典三栏，熟悉但更轻快",
-    summary:
-      "保留印象笔记式的笔记本树、笔记列表和主编辑区，减少迁移后的学习成本。",
     icon: "bx:bx-layout",
     accent: "workspace",
-    points: [
-      "支持无限级嵌套笔记本，适合长期沉淀的大型知识库。",
-      "笔记本可以拖拽排序和调整层级，笔记支持多选移动与多选合并。",
-      "基于 TipTap 的富文本编辑器，兼顾流畅写作与结构化内容保存。",
-    ],
   },
   {
-    title: "数据开放，迁移和导出不被绑架",
-    summary:
-      "笔记内容以结构化 JSON、Markdown 与纯文本多形态保存，便于编辑器、API、搜索和 Agent 分别使用。",
     icon: "bx:bx-transfer",
     accent: "open",
-    points: [
-      "内容存放在基于标准 SQLite 的 Cloudflare D1 中，可通过 API、MCP 或 CLI 按需读取。",
-      "提供印象笔记 ENEX 导入脚本，保留创建/修改时间与嵌套笔记本层级。",
-      "Markdown 面向导入导出和 Agent 使用，降低未来再次迁移的成本。",
-    ],
   },
   {
-    title: "多端随手记录，同步几乎无感",
-    summary:
-      "电脑、手机、平板都能直接打开使用，记录和同步尽量贴近本地应用的顺滑体验。",
     icon: "bx:bx-shield-quarter",
     accent: "secure",
-    points: [
-      "支持 PC 与移动端网页访问，也可以安装成 PWA，随手打开就能记。",
-      "已有笔记支持离线编辑草稿和本地同步队列，弱网时也能先写后同步。",
-      "单用户登录、PBKDF2-SHA256 密码 hash 与独立 API Token，安全能力放在顺手体验背后。",
-    ],
   },
 ];
+
+const features = featureCopy.items.map((item, index) => ({ ...item, ...featureArt[index] }));
 ---
 
 <section class="mt-8 md:mt-12 relative overflow-hidden" aria-labelledby="features">
@@ -71,7 +36,7 @@ const features = [
 
   <div class="max-w-3xl mb-14 text-center mx-auto">
     <h2 class="text-4xl lg:text-5xl font-bold text-slate-900" id="features">
-      重新定义个人笔记体验
+      {featureCopy.heading}
     </h2>
   </div>
 

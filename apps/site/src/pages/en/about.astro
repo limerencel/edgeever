@@ -1,0 +1,86 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Container from "@/components/container.astro";
+import Sectionhead from "@/components/sectionhead.astro";
+import { Icon } from "astro-icon/components";
+---
+
+<Layout
+  title="About"
+  description="Learn about EdgeEver's Cloudflare-native self-hosted architecture, open APIs, and MCP support for AI Agents."
+>
+  <Container>
+    <Sectionhead>
+      <Fragment slot="title">About EdgeEver</Fragment>
+      <Fragment slot="desc">An open-source, self-hosted, Cloudflare-native notes workspace.</Fragment>
+    </Sectionhead>
+
+    <div class="mx-auto max-w-4xl mt-16 text-slate-700 leading-relaxed text-lg">
+      <div class="bg-slate-50 border border-slate-100 p-8 rounded-lg mb-12 shadow-sm">
+        <h2 class="font-bold text-3xl text-slate-900 flex items-center gap-2 mb-4">
+          <Icon class="text-brand w-7 h-7 shrink-0" name="bx:bxs-quote-left" />
+          Why EdgeEver?
+        </h2>
+        <p class="text-slate-600 text-lg leading-relaxed">
+          Many long-time Evernote users need a reliable, open, and responsive personal knowledge base. As commercial notes products become heavier and harder to leave, getting your notes back into open formats becomes unnecessarily painful.
+        </p>
+        <p class="mt-4 font-semibold text-brand-text">
+          EdgeEver keeps the familiar three-pane notes workflow while adding open data, REST API, MCP, and near-zero-cost self-hosted deployment.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 my-16">
+        <div class="bg-white border border-slate-100 p-8 rounded-lg glow-card hover-lift flex flex-col justify-between">
+          <div>
+            <div class="bg-brand-soft border border-brand-border/20 rounded-xl p-2 w-10 h-10 flex items-center justify-center mb-6">
+              <Icon class="text-brand-text w-5 h-5" name="bx:bxs-cloud" />
+            </div>
+            <h3 class="font-bold text-2xl text-slate-900 mb-3">Cloudflare-native architecture</h3>
+            <p class="text-slate-500 text-sm leading-relaxed mb-6">
+              EdgeEver runs as a Cloudflare Worker serving both API and frontend assets. D1 stores notes, R2 stores images and attachments, and the whole stack is friendly to personal self-hosting.
+            </p>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li class="flex items-center gap-2"><Icon class="text-brand w-4 h-4 shrink-0" name="bx:bx-check-circle" />D1 SQLite database for note data</li>
+              <li class="flex items-center gap-2"><Icon class="text-brand w-4 h-4 shrink-0" name="bx:bx-check-circle" />R2 object storage for files and images</li>
+              <li class="flex items-center gap-2"><Icon class="text-brand w-4 h-4 shrink-0" name="bx:bx-check-circle" />Workers, Hono, and Zod for the REST API</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-white border border-slate-100 p-8 rounded-lg glow-card hover-lift flex flex-col justify-between">
+          <div>
+            <div class="bg-brand-soft border border-brand-border/20 rounded-xl p-2 w-10 h-10 flex items-center justify-center mb-6">
+              <Icon class="text-brand-text w-5 h-5" name="bx:bxs-bot" />
+            </div>
+            <h3 class="font-bold text-2xl text-slate-900 mb-3">Open interfaces for Agents</h3>
+            <p class="text-slate-500 text-sm leading-relaxed mb-6">
+              EdgeEver exposes an OpenAPI schema and Remote MCP endpoint. After creating an API token, AI Agents can read, organize, and maintain notes within the authorized scope.
+            </p>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li class="flex items-center gap-2"><Icon class="text-brand w-4 h-4 shrink-0" name="bx:bx-check-circle" />Built-in Remote MCP endpoint</li>
+              <li class="flex items-center gap-2"><Icon class="text-brand w-4 h-4 shrink-0" name="bx:bx-check-circle" />Agents can read, classify, and organize notes through APIs</li>
+              <li class="flex items-center gap-2"><Icon class="text-brand w-4 h-4 shrink-0" name="bx:bx-check-circle" />The settings page provides MCP config copy actions</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative bg-slate-900 border border-slate-800 p-8 rounded-lg flex flex-col md:flex-row items-center justify-between gap-8 my-12 overflow-hidden shadow-xl">
+        <div class="relative z-10 max-w-lg">
+          <h3 class="font-bold text-white text-2xl">Start from a fork of the official repository</h3>
+          <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+            Fork the official repository first. Later, use GitHub Sync fork to pull upstream updates, then redeploy with `bun install`, `bun run deploy:doctor`, and `bun run deploy`.
+          </p>
+        </div>
+        <a
+          href="https://github.com/msh01/edgeever"
+          target="_blank"
+          class="relative z-10 px-6 py-3 bg-white text-slate-900 rounded-xl text-center font-semibold hover:bg-slate-100 transition whitespace-nowrap shadow-lg hover:scale-[1.02]"
+          rel="noopener"
+        >
+          Open GitHub
+        </a>
+      </div>
+    </div>
+  </Container>
+</Layout>

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { LockKeyhole } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { GitHubRepositoryLink } from "@/components/GitHubRepositoryLink";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ const getDefaultLoginCredentials = () => {
 };
 
 export const LoginScreen = ({ error, isSubmitting, onSubmit }: LoginScreenProps) => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState(() => getDefaultLoginCredentials().username);
   const [password, setPassword] = useState(() => getDefaultLoginCredentials().password);
 
@@ -48,14 +50,14 @@ export const LoginScreen = ({ error, isSubmitting, onSubmit }: LoginScreenProps)
             <LockKeyhole className="h-5.5 w-5.5" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold leading-tight tracking-tight text-slate-900">登录 EdgeEver</h1>
-            <p className="mt-1 text-xs font-medium text-slate-400 uppercase tracking-wider">自托管笔记工作区</p>
+            <h1 className="text-xl font-bold leading-tight tracking-tight text-slate-900">{t("login.title")}</h1>
+            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-slate-400">{t("login.subtitle")}</p>
           </div>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">账号</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-700">{t("login.username")}</span>
             <Input
               autoComplete="username"
               className="h-11 rounded-lg bg-slate-50/50 px-3.5 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-emerald-500/10"
@@ -65,7 +67,7 @@ export const LoginScreen = ({ error, isSubmitting, onSubmit }: LoginScreenProps)
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">密码</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-700">{t("login.password")}</span>
             <Input
               autoComplete="current-password"
               className="h-11 rounded-lg bg-slate-50/50 px-3.5 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-emerald-500/10"
@@ -89,7 +91,7 @@ export const LoginScreen = ({ error, isSubmitting, onSubmit }: LoginScreenProps)
             disabled={isSubmitting}
           >
             <LockKeyhole className="h-4 w-4 mr-1" />
-            {isSubmitting ? "安全登录中..." : "开启工作区"}
+            {isSubmitting ? t("login.submitting") : t("login.submit")}
           </Button>
         </form>
       </section>

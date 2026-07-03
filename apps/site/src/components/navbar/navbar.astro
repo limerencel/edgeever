@@ -3,23 +3,28 @@ import Container from "@/components/container.astro";
 import Link from "@/components/ui/link.astro";
 import Dropdown from "./dropdown.astro";
 import { Astronav, MenuItems, MenuIcon } from "astro-navbar";
+import { getLocalizedPath, getSiteLocale, siteCopy } from "@/i18n";
 
+const locale = getSiteLocale(Astro.url.pathname);
+const copy = siteCopy[locale].nav;
+const alternateLocale = locale === "zh-CN" ? "en-US" : "zh-CN";
+const alternatePath = getLocalizedPath(alternateLocale, Astro.url.pathname);
 const menuitems = [
   {
-    title: "功能特性",
-    path: "/#features",
+    title: copy.features,
+    path: `${getLocalizedPath(locale, "/")}#features`,
   },
   {
-    title: "博客",
-    path: "/blog",
+    title: copy.blog,
+    path: getLocalizedPath(locale, "/blog"),
   },
   {
-    title: "关于项目",
-    path: "/about",
+    title: copy.about,
+    path: getLocalizedPath(locale, "/about"),
   },
   {
-    title: "联系我们",
-    path: "/contact",
+    title: copy.contact,
+    path: getLocalizedPath(locale, "/contact"),
   },
 ];
 ---
@@ -28,7 +33,7 @@ const menuitems = [
   <header class="flex flex-col lg:flex-row justify-between items-center my-5">
     <Astronav>
       <div class="flex w-full lg:w-auto items-center justify-between">
-        <a href="/" class="flex items-center gap-2 text-lg" aria-label="EdgeEver 首页"
+        <a href={getLocalizedPath(locale, "/")} class="flex items-center gap-2 text-lg" aria-label={copy.homeAria}
           >
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--edgeever-brand-logo-bg)]">
             <svg class="h-6 w-6" viewBox="0 0 64 64" role="img" aria-hidden="true">
@@ -77,14 +82,16 @@ const menuitems = [
           }
         </ul>
         <div class="lg:hidden flex items-center mt-3 gap-4">
-        <Link href="https://demo.edgeever.org" target="_blank" style="muted" block size="md">在线演示</Link>
+        <Link href="https://demo.edgeever.org" target="_blank" style="muted" block size="md">{copy.demo}</Link>
           <Link href="https://github.com/msh01/edgeever" target="_blank" size="md" block>GitHub</Link>
+          <a href={alternatePath} class="text-sm text-gray-600 hover:text-gray-900">{copy.languageLabel}</a>
         </div>
       </MenuItems>
     </Astronav>
     <div>
       <div class="hidden lg:flex items-center gap-4">
-        <a href="https://demo.edgeever.org" target="_blank" class="text-gray-600 hover:text-gray-900 transition">在线演示</a>
+        <a href="https://demo.edgeever.org" target="_blank" class="text-gray-600 hover:text-gray-900 transition">{copy.demo}</a>
+        <a href={alternatePath} class="text-gray-600 hover:text-gray-900 transition">{copy.languageLabel}</a>
         <Link href="https://github.com/msh01/edgeever" target="_blank" size="md">GitHub</Link>
       </div>
     </div>

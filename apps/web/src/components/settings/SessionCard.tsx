@@ -1,4 +1,5 @@
 import { LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -9,6 +10,8 @@ interface SessionCardProps {
 }
 
 export const SessionCard = ({ authRequired, isLoggingOut, onLogout }: SessionCardProps) => {
+  const { t } = useTranslation();
+
   if (!authRequired) {
     return null;
   }
@@ -24,7 +27,7 @@ export const SessionCard = ({ authRequired, isLoggingOut, onLogout }: SessionCar
           onClick={onLogout}
         >
           <LogOut className="h-4 w-4" />
-          {isLoggingOut ? "安全退出中..." : "退出登录"}
+          {isLoggingOut ? t("session.loggingOut") : t("session.logout")}
         </Button>
       </CardContent>
     </Card>

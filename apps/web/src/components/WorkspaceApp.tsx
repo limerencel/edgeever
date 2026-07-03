@@ -14,6 +14,7 @@ import {
 } from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Home, Search, UserRound, Plus, ChevronDown, ChevronRight, RefreshCw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,7 +116,7 @@ const emptySyncQueueSummary = (): SyncQueueSummary => ({
   error: 0,
 });
 
-const PaneLoadingFallback = ({ label = "正在加载" }: { label?: string }) => (
+const PaneLoadingFallback = ({ label = "Loading" }: { label?: string }) => (
   <div className="flex h-full min-h-0 items-center justify-center bg-white text-sm font-medium text-slate-400" role="status">
     {label}
   </div>
@@ -206,28 +207,33 @@ const MobileBottomNav = ({
   onCreateMemo: () => void;
   onHome: () => void;
   onOpenSettings: () => void;
-}) => (
-  <nav
-    className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-5 pb-[max(0.125rem,env(safe-area-inset-bottom))] pt-0 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
-    aria-label="移动端主导航"
-  >
-    <div className="relative grid h-12 grid-cols-3 items-center">
-      <MobileBottomNavButton active={activeItem === "home"} icon={<Home className="h-5 w-5" />} label="首页" onClick={onHome} />
-      <div aria-hidden="true" />
-      <MobileBottomNavButton active={activeItem === "settings"} icon={<UserRound className="h-5 w-5" />} label="我的" onClick={onOpenSettings} />
-      <button
-        className="absolute left-1/2 top-[-0.8rem] flex h-[3.25rem] w-[3.25rem] -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-white bg-emerald-500 text-white shadow-[0_12px_26px_rgb(var(--brand-green-rgb)/0.32)] transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-200 disabled:opacity-70 disabled:hover:bg-emerald-200"
-        type="button"
-        title={!canCreateMemo ? "当前视图不可新建笔记" : isCreating ? "正在创建" : "新建笔记"}
-        aria-label={!canCreateMemo ? "当前视图不可新建笔记" : isCreating ? "正在创建" : "新建笔记"}
-        disabled={!canCreateMemo || isCreating}
-        onClick={onCreateMemo}
-      >
-        <Plus className="h-7 w-7" />
-      </button>
-    </div>
-  </nav>
-);
+}) => {
+  const { t } = useTranslation();
+  const createMemoLabel = !canCreateMemo ? t("nav.createDisabled") : isCreating ? t("nav.creating") : t("nav.createMemo");
+
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-5 pb-[max(0.125rem,env(safe-area-inset-bottom))] pt-0 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
+      aria-label={t("nav.mobileMain")}
+    >
+      <div className="relative grid h-12 grid-cols-3 items-center">
+        <MobileBottomNavButton active={activeItem === "home"} icon={<Home className="h-5 w-5" />} label={t("nav.home")} onClick={onHome} />
+        <div aria-hidden="true" />
+        <MobileBottomNavButton active={activeItem === "settings"} icon={<UserRound className="h-5 w-5" />} label={t("nav.mine")} onClick={onOpenSettings} />
+        <button
+          className="absolute left-1/2 top-[-0.8rem] flex h-[3.25rem] w-[3.25rem] -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-white bg-emerald-500 text-white shadow-[0_12px_26px_rgb(var(--brand-green-rgb)/0.32)] transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-200 disabled:opacity-70 disabled:hover:bg-emerald-200"
+          type="button"
+          title={createMemoLabel}
+          aria-label={createMemoLabel}
+          disabled={!canCreateMemo || isCreating}
+          onClick={onCreateMemo}
+        >
+          <Plus className="h-7 w-7" />
+        </button>
+      </div>
+    </nav>
+  );
+};
 
 const MobileNotebookPicker = ({
   currentLabel,
@@ -244,6 +250,7 @@ const MobileNotebookPicker = ({
   onSelectAll: () => void;
   onSelect: (notebookId: string) => void;
 }) => {
+  const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement | null>(null);
   const [notebookSearch, setNotebookSearch] = useState("");
   const tree = useMemo(() => buildNotebookTree(notebooks), [notebooks]);
@@ -256,7 +263,7 @@ const MobileNotebookPicker = ({
   const [expandedNotebookIds, setExpandedNotebookIds] = useState<Set<string>>(() => new Set(selectedAncestorIds));
   const allSelected = !currentLabel && selectedNotebookId === null;
   const selectedNotebookName =
-    currentLabel ?? (allSelected ? "全部笔记" : notebooks.find((item) => item.id === selectedNotebookId)?.name ?? "笔记本");
+    currentLabel ?? (allSelected ? t("mobileNotebookPicker.allMemos") : notebooks.find((item) => item.id === selectedNotebookId)?.name ?? t("mobileNotebookPicker.notebookFallback"));
   const searchQuery = notebookSearch.trim();
   const searchActive = Boolean(searchQuery);
   const allNotebookBranchesExpanded =
@@ -308,10 +315,10 @@ const MobileNotebookPicker = ({
       <DrawerContent className="inset-x-0 max-h-[82dvh] overflow-hidden border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)] lg:hidden">
         <header className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
           <DrawerHeader className="min-w-0 p-0">
-            <DrawerTitle className="text-base">切换笔记本</DrawerTitle>
-            <DrawerDescription className="truncate">当前：{selectedNotebookName}</DrawerDescription>
+            <DrawerTitle className="text-base">{t("mobileNotebookPicker.title")}</DrawerTitle>
+            <DrawerDescription className="truncate">{t("mobileNotebookPicker.current", { name: selectedNotebookName })}</DrawerDescription>
           </DrawerHeader>
-          <Button size="icon" variant="ghost" title="关闭" aria-label="关闭" onClick={onClose}>
+          <Button size="icon" variant="ghost" title={t("common.close")} aria-label={t("common.close")} onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </header>
@@ -321,8 +328,8 @@ const MobileNotebookPicker = ({
             <input
               className="min-w-0 flex-1 bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
               value={notebookSearch}
-              placeholder="搜索笔记本"
-              aria-label="搜索笔记本"
+              placeholder={t("mobileNotebookPicker.searchPlaceholder")}
+              aria-label={t("mobileNotebookPicker.searchPlaceholder")}
               onChange={(event) => setNotebookSearch(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Escape" && notebookSearch) {
@@ -335,8 +342,8 @@ const MobileNotebookPicker = ({
               <button
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-white hover:text-slate-700"
                 type="button"
-                title="清空搜索"
-                aria-label="清空搜索"
+                title={t("mobileNotebookPicker.clearSearch")}
+                aria-label={t("mobileNotebookPicker.clearSearch")}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setNotebookSearch("")}
               >
@@ -353,25 +360,25 @@ const MobileNotebookPicker = ({
             )}
             type="button"
             data-mobile-notebook-id="__all__"
-            aria-label={allSelected ? "当前：全部笔记" : "切换到全部笔记"}
+            aria-label={allSelected ? t("mobileNotebookPicker.currentAll") : t("mobileNotebookPicker.switchAll")}
             aria-current={allSelected ? "page" : undefined}
             onClick={onSelectAll}
           >
-            <span className="min-w-0 flex-1 truncate text-base">全部笔记</span>
+            <span className="min-w-0 flex-1 truncate text-base">{t("mobileNotebookPicker.allMemos")}</span>
           </button>
           {filteredTree.length > 0 ? (
             <>
               <div className="mb-1 flex h-8 items-center justify-between px-3 text-xs font-semibold text-slate-400">
-                <span>{searchActive ? "匹配的笔记本" : "笔记本"}</span>
+                <span>{searchActive ? t("mobileNotebookPicker.matchedNotebooks") : t("mobileNotebookPicker.notebooks")}</span>
                 {!searchActive && expandableNotebookIds.length > 0 && (
                   <button
                     className="rounded-md px-2 py-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                     type="button"
-                    aria-label={allNotebookBranchesExpanded ? "收起全部笔记本" : "展开全部笔记本"}
+                    aria-label={allNotebookBranchesExpanded ? t("mobileNotebookPicker.collapseAllAria") : t("mobileNotebookPicker.expandAllAria")}
                     aria-pressed={allNotebookBranchesExpanded}
                     onClick={handleToggleAllNotebookBranches}
                   >
-                    {allNotebookBranchesExpanded ? "收起全部" : "展开全部"}
+                    {allNotebookBranchesExpanded ? t("mobileNotebookPicker.collapseAll") : t("mobileNotebookPicker.expandAll")}
                   </button>
                 )}
               </div>
@@ -391,7 +398,7 @@ const MobileNotebookPicker = ({
           ) : (
             <div className="px-3 py-8 text-center">
               <div className="text-sm font-medium text-slate-700">
-                {searchQuery ? `没有找到「${searchQuery}」` : "没有找到笔记本"}
+                {searchQuery ? t("mobileNotebookPicker.noSearchResult", { query: searchQuery }) : t("mobileNotebookPicker.noNotebook")}
               </div>
               {searchQuery && (
                 <button
@@ -399,7 +406,7 @@ const MobileNotebookPicker = ({
                   type="button"
                   onClick={() => setNotebookSearch("")}
                 >
-                  显示全部笔记本
+                  {t("mobileNotebookPicker.showAll")}
                 </button>
               )}
             </div>
@@ -427,6 +434,7 @@ const MobileNotebookPickerItem = ({
   onSelect: (notebookId: string) => void;
   onToggleExpanded: (notebookId: string) => void;
 }) => {
+  const { t } = useTranslation();
   const selected = node.id === selectedNotebookId;
   const hasChildren = node.children.length > 0;
   const hasSelectedDescendant = selectedNotebookId ? notebookTreeContainsId(node.children, selectedNotebookId) : false;
@@ -454,7 +462,7 @@ const MobileNotebookPickerItem = ({
             )}
             type="button"
             disabled={searchActive}
-            aria-label={expanded ? `收起 ${node.name}` : `展开 ${node.name}`}
+            aria-label={expanded ? t("mobileNotebookPicker.collapse", { name: node.name }) : t("mobileNotebookPicker.expand", { name: node.name })}
             aria-expanded={expanded}
             onClick={(event) => {
               event.stopPropagation();
@@ -469,7 +477,7 @@ const MobileNotebookPickerItem = ({
         <button
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
           type="button"
-          aria-label={selected ? `当前：${node.name}` : `切换到 ${node.name}`}
+          aria-label={selected ? t("mobileNotebookPicker.currentNotebook", { name: node.name }) : t("mobileNotebookPicker.switchToNotebook", { name: node.name })}
           aria-current={selected ? "page" : undefined}
           onClick={() => onSelect(node.id)}
         >
@@ -507,6 +515,7 @@ export const WorkspaceApp = ({
   isLoggingOut: boolean;
   onLogout: () => void;
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1236,8 +1245,8 @@ export const WorkspaceApp = ({
   const handleDeleteNotebook = (notebook: Notebook) => {
     if (notebook.slug === "inbox") {
       setAppNoticeDialog({
-        title: "等待分类不能删除",
-        description: "等待分类是默认笔记本，用来保证新笔记始终有归属。",
+        title: t("workspace.inboxDeleteTitle"),
+        description: t("workspace.inboxDeleteDescription"),
       });
       return;
     }
@@ -1400,41 +1409,41 @@ export const WorkspaceApp = ({
   const allSelectedMemosPinned =
     selectedMemosInCurrentList.length > 0 && selectedMemosInCurrentList.every((memo) => memo.isPinned);
   const selectedPinTarget = !allSelectedMemosPinned;
-  const selectionPinLabel = allSelectedMemosPinned ? "取消置顶" : "置顶";
+  const selectionPinLabel = allSelectedMemosPinned ? t("workspace.selection.unpin") : t("workspace.selection.pin");
   const selectionPinTitle =
     selectedMemoIds.size === 0
-      ? "请选择笔记"
+      ? t("workspace.selection.chooseMemo")
       : memoView === "trash"
-        ? "回收站内不可置顶"
+        ? t("workspace.selection.trashCannotPin")
         : pinMemosMutation.isPending
-          ? "正在更新置顶"
+          ? t("workspace.selection.updatingPin")
           : selectionPinLabel;
   const selectionMoveTitle =
     selectedMemoIds.size === 0
-      ? "请选择笔记"
+      ? t("workspace.selection.chooseMemo")
       : memoView === "trash"
-        ? "回收站内不可移动"
+        ? t("workspace.selection.trashCannotMove")
         : notebooks.length === 0
-          ? "没有可移动的笔记本"
+          ? t("workspace.selection.noMovableNotebook")
           : moveMemosMutation.isPending
-            ? "正在移动"
-            : "移动";
+            ? t("workspace.selection.moving")
+            : t("workspace.selection.move");
   const selectionMergeTitle =
     selectedMemoIds.size < 2
-      ? "至少选择 2 条笔记"
+      ? t("workspace.selection.needTwoMemos")
       : memoView === "trash"
-        ? "回收站内不可合并"
+        ? t("workspace.selection.trashCannotMerge")
         : mergeMutation.isPending
-          ? "正在合并"
-          : "合并笔记";
+          ? t("workspace.selection.merging")
+          : t("workspace.selection.merge");
   const selectionDeleteTitle =
     selectedMemoIds.size === 0
-      ? "请选择笔记"
+      ? t("workspace.selection.chooseMemo")
       : deleteMemosMutation.isPending || deleteMemoMutation.isPending
-        ? "正在删除"
+        ? t("workspace.selection.deleting")
         : memoView === "trash"
-          ? "永久删除"
-          : "删除";
+          ? t("workspace.selection.permanentDelete")
+          : t("workspace.selection.delete");
   const memoSelectionActionBar = memoSelectionModeActive ? (
     <MemoSelectionActionBar
       deleteTitle={selectionDeleteTitle}
@@ -1909,20 +1918,26 @@ export const WorkspaceApp = ({
 
   const shouldRenderRightPane = isDesktop || activePane === "editor";
   const rightPaneLoadingLabel =
-    rightView === "settings" ? "正在加载个人中心" : rightView === "assets" ? "正在加载资源库" : rightView === "evernote-migration" ? "正在加载迁移指引" : "正在加载编辑器";
+    rightView === "settings"
+      ? t("workspace.loading.settings")
+      : rightView === "assets"
+        ? t("workspace.loading.assets")
+        : rightView === "evernote-migration"
+          ? t("workspace.loading.migration")
+          : t("workspace.loading.editor");
   const pullToRefreshVisible = pullToRefreshDistance > 0 || isPullRefreshing;
   const pullToRefreshReady = pullToRefreshDistance >= PULL_TO_REFRESH_TRIGGER_PX;
   const pullToRefreshLabel = isPullRefreshing
     ? isStandaloneRuntime
-      ? "正在拉取最新笔记"
-      : "正在刷新网页"
+      ? t("workspace.pullToRefresh.refreshingNotes")
+      : t("workspace.pullToRefresh.refreshingPage")
     : pullToRefreshReady
       ? isStandaloneRuntime
-        ? "松开刷新"
-        : "松开刷新网页"
+        ? t("workspace.pullToRefresh.releaseNotes")
+        : t("workspace.pullToRefresh.releasePage")
       : isStandaloneRuntime
-        ? "下拉刷新"
-        : "下拉刷新网页";
+        ? t("workspace.pullToRefresh.pullNotes")
+        : t("workspace.pullToRefresh.pullPage");
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-slate-50 text-slate-950">
@@ -1955,7 +1970,7 @@ export const WorkspaceApp = ({
             )}
           >
             {(isDesktop || activePane === "notebooks") && (
-              <Suspense fallback={<PaneLoadingFallback label="正在加载笔记本" />}>
+              <Suspense fallback={<PaneLoadingFallback label={t("workspace.loading.notebooks")} />}>
                 <NotebookPane
                   authRequired={authRequired}
                   user={user}
@@ -2120,9 +2135,9 @@ export const WorkspaceApp = ({
               aria-valuemin={MIN_MEMO_LIST_WIDTH_PX}
               aria-valuemax={MAX_MEMO_LIST_WIDTH_PX}
               aria-valuenow={memoListWidth}
-              aria-label="调整笔记列表宽度"
+              aria-label={t("workspaceDialogs.resizeMemoList")}
               tabIndex={0}
-              title="拖拽调整列表栏宽度，双击恢复默认，方向键微调"
+              title={t("workspaceDialogs.resizeMemoListHint")}
               onDoubleClick={handleResetMemoListWidth}
               onKeyDown={handleMemoListResizeKeyDown}
               onPointerDown={handleMemoListResizePointerDown}
@@ -2224,9 +2239,9 @@ export const WorkspaceApp = ({
       )}
       {emptyTrashConfirmationOpen && (
         <AppConfirmDialog
-          title="清空回收站"
-          description="回收站中的全部笔记和仍关联的附件都会删除，这个操作不可恢复。"
-          confirmLabel="清空回收站"
+          title={t("workspaceDialogs.emptyTrashTitle")}
+          description={t("workspaceDialogs.emptyTrashDescription")}
+          confirmLabel={t("workspaceDialogs.emptyTrashConfirm")}
           closeOnBrowserBack={false}
           isWorking={emptyTrashMutation.isPending}
           tone="danger"
@@ -2244,9 +2259,9 @@ export const WorkspaceApp = ({
       )}
       {notebookDeleteConfirmation && (
         <AppConfirmDialog
-          title={`删除笔记本「${notebookDeleteConfirmation.name}」`}
-          description="请先清空其中的笔记和子笔记本。删除后无法从这里恢复。"
-          confirmLabel="删除"
+          title={t("workspaceDialogs.deleteNotebookTitle", { name: notebookDeleteConfirmation.name })}
+          description={t("workspaceDialogs.deleteNotebookDescription")}
+          confirmLabel={t("common.delete")}
           closeOnBrowserBack={false}
           isWorking={deleteNotebookMutation.isPending}
           tone="danger"
@@ -2262,7 +2277,7 @@ export const WorkspaceApp = ({
         <AppConfirmDialog
           title={appNoticeDialog.title}
           description={appNoticeDialog.description}
-          confirmLabel="知道了"
+          confirmLabel={t("workspaceDialogs.ok")}
           closeOnBrowserBack={false}
           hideCancel
           tone="neutral"
@@ -2282,7 +2297,7 @@ export const WorkspaceApp = ({
       )}
       {mobileNotebookPickerOpen && (
         <MobileNotebookPicker
-          currentLabel={memoView === "trash" ? "回收站" : undefined}
+          currentLabel={memoView === "trash" ? t("notebookPane.trash") : undefined}
           notebooks={notebooks}
           selectedNotebookId={selectedNotebookId}
           onClose={() => setMobileNotebookPickerOpen(false)}

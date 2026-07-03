@@ -3,6 +3,7 @@ import { DEFAULT_MEMO_TITLE } from "@edgeever/shared";
 import { buildNotebookTree, type NotebookNode, type NotebookNodeComparator } from "./utils";
 import * as React from "react";
 import type { ReactNode } from "react";
+import type { TFunction } from "i18next";
 
 export type Pane = "notebooks" | "memos" | "editor";
 export type MemoView = "notebook" | "trash";
@@ -38,40 +39,40 @@ export type MemoTemplate = {
   tags: string[];
 };
 
-export const MEMO_TEMPLATES: MemoTemplate[] = [
+export const getMemoTemplates = (t: TFunction): MemoTemplate[] => [
   {
     id: "quick-note",
-    title: "速记",
-    description: "适合临时记录想法、链接和灵感。",
-    contentMarkdown: "## 速记\n\n- \n\n## 后续动作\n\n- [ ] ",
+    title: t("templates.items.quickNote.title"),
+    description: t("templates.items.quickNote.description"),
+    contentMarkdown: t("templates.items.quickNote.contentMarkdown"),
     tags: ["template", "quick-note"],
   },
   {
     id: "meeting",
-    title: "会议记录",
-    description: "议题、结论和待办放在同一页。",
-    contentMarkdown: "## 会议记录\n\n时间：\n参与人：\n\n## 议题\n\n- \n\n## 结论\n\n- \n\n## 待办\n\n- [ ] ",
+    title: t("templates.items.meeting.title"),
+    description: t("templates.items.meeting.description"),
+    contentMarkdown: t("templates.items.meeting.contentMarkdown"),
     tags: ["template", "meeting"],
   },
   {
     id: "checklist",
-    title: "清单",
-    description: "快速列出待办、采购、项目检查项。",
-    contentMarkdown: "## 清单\n\n- [ ] \n- [ ] \n- [ ] ",
+    title: t("templates.items.checklist.title"),
+    description: t("templates.items.checklist.description"),
+    contentMarkdown: t("templates.items.checklist.contentMarkdown"),
     tags: ["template", "checklist"],
   },
   {
     id: "reading",
-    title: "读书笔记",
-    description: "摘录、观点和下一步阅读整理。",
-    contentMarkdown: "## 读书笔记\n\n书名：\n作者：\n\n## 摘录\n\n> \n\n## 我的观点\n\n\n## 延伸问题\n\n- ",
+    title: t("templates.items.reading.title"),
+    description: t("templates.items.reading.description"),
+    contentMarkdown: t("templates.items.reading.contentMarkdown"),
     tags: ["template", "reading"],
   },
   {
     id: "daily",
-    title: "每日复盘",
-    description: "记录今天完成了什么、卡在哪里。",
-    contentMarkdown: "## 每日复盘\n\n## 今天完成\n\n- \n\n## 遇到的问题\n\n- \n\n## 明天优先级\n\n- [ ] ",
+    title: t("templates.items.daily.title"),
+    description: t("templates.items.daily.description"),
+    contentMarkdown: t("templates.items.daily.contentMarkdown"),
     tags: ["template", "daily"],
   },
 ];
@@ -160,30 +161,50 @@ export const MAX_MEMO_LIST_WIDTH_PX = 540;
 export const MEMO_DRAG_MIME = "application/x-edgeever-memos";
 export const NOTEBOOK_DRAG_MIME = "application/x-edgeever-notebook";
 
-export const MEMO_SORT_OPTIONS: Array<{ value: MemoSortMode; label: string }> = [
-  { value: "updated-desc", label: "最近更新" },
-  { value: "created-desc", label: "创建时间" },
-  { value: "title-asc", label: "标题 A-Z" },
+export const getMemoSortOptions = (t: TFunction): Array<{ value: MemoSortMode; label: string }> => [
+  { value: "updated-desc", label: t("options.memoSort.updatedDesc") },
+  { value: "created-desc", label: t("options.memoSort.createdDesc") },
+  { value: "title-asc", label: t("options.memoSort.titleAsc") },
 ];
 
-export const NOTEBOOK_SORT_OPTIONS: Array<{ value: NotebookSortMode; label: string }> = [
-  { value: "name-asc", label: "名称" },
-  { value: "memo-count-desc", label: "笔记数量" },
-  { value: "updated-desc", label: "更新日期" },
+const NOTEBOOK_SORT_VALUES: NotebookSortMode[] = ["name-asc", "memo-count-desc", "updated-desc"];
+
+export const getNotebookSortOptions = (t: TFunction): Array<{ value: NotebookSortMode; label: string }> => [
+  { value: "name-asc", label: t("options.notebookSort.nameAsc") },
+  { value: "memo-count-desc", label: t("options.notebookSort.memoCountDesc") },
+  { value: "updated-desc", label: t("options.notebookSort.updatedDesc") },
 ];
 
-export const MEMO_FILTER_OPTIONS: Array<{ value: MemoFilterMode; label: string }> = [
-  { value: "all", label: "全部" },
-  { value: "pinned", label: "置顶" },
-  { value: "tagged", label: "有标签" },
-  { value: "untagged", label: "无标签" },
+export const getMemoFilterOptions = (t: TFunction): Array<{ value: MemoFilterMode; label: string }> => [
+  { value: "all", label: t("options.memoFilter.all") },
+  { value: "pinned", label: t("options.memoFilter.pinned") },
+  { value: "tagged", label: t("options.memoFilter.tagged") },
+  { value: "untagged", label: t("options.memoFilter.untagged") },
 ];
 
-export const SHORTCUT_ACTION_OPTIONS: Array<{ value: ShortcutAction; label: string; description: string }> = [
-  { value: "createMemo", label: "新建笔记", description: "在当前笔记本中创建一条新笔记。" },
-  { value: "createNotebook", label: "新建笔记本", description: "在当前层级创建一个新笔记本。" },
-  { value: "focusSearch", label: "搜索笔记", description: "打开搜索或聚焦笔记内搜索。" },
-  { value: "focusReplace", label: "替换文本", description: "在当前笔记中打开替换。" },
+export const getShortcutActionOptions = (
+  t: TFunction
+): Array<{ value: ShortcutAction; label: string; description: string }> => [
+  {
+    value: "createMemo",
+    label: t("shortcuts.actions.createMemo.label"),
+    description: t("shortcuts.actions.createMemo.description"),
+  },
+  {
+    value: "createNotebook",
+    label: t("shortcuts.actions.createNotebook.label"),
+    description: t("shortcuts.actions.createNotebook.description"),
+  },
+  {
+    value: "focusSearch",
+    label: t("shortcuts.actions.focusSearch.label"),
+    description: t("shortcuts.actions.focusSearch.description"),
+  },
+  {
+    value: "focusReplace",
+    label: t("shortcuts.actions.focusReplace.label"),
+    description: t("shortcuts.actions.focusReplace.description"),
+  },
 ];
 
 export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
@@ -193,7 +214,7 @@ export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
   focusReplace: { key: "h", ctrlOrMeta: true, shift: false, alt: false },
 };
 
-const SHORTCUT_ACTION_VALUES = SHORTCUT_ACTION_OPTIONS.map((option) => option.value);
+const SHORTCUT_ACTION_VALUES: ShortcutAction[] = ["createMemo", "createNotebook", "focusSearch", "focusReplace"];
 
 export const getMemoTitle = (title: string | null | undefined) => title?.trim() || DEFAULT_MEMO_TITLE;
 
@@ -274,7 +295,7 @@ export const writeMemoListWidthPreference = (width: number) => {
 export const readNotebookSortPreference = (): NotebookSortMode => {
   try {
     const sortMode = window.localStorage.getItem(NOTEBOOK_SORT_STORAGE_KEY);
-    return NOTEBOOK_SORT_OPTIONS.some((option) => option.value === sortMode) ? (sortMode as NotebookSortMode) : "name-asc";
+    return NOTEBOOK_SORT_VALUES.includes(sortMode as NotebookSortMode) ? (sortMode as NotebookSortMode) : "name-asc";
   } catch {
     return "name-asc";
   }

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, RotateCcw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ShortcutAction, ShortcutBinding, ShortcutSettings } from "@/lib/app-helpers";
 import {
   DEFAULT_SHORTCUT_SETTINGS,
   formatShortcutBinding,
+  getShortcutActionOptions,
   shortcutBindingFromKeyboardEvent,
   shortcutBindingsEqual,
-  SHORTCUT_ACTION_OPTIONS,
 } from "@/lib/app-helpers";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,21 +28,24 @@ interface ShortcutSettingsItemProps {
 const getConflictAction = (
   action: ShortcutAction,
   binding: ShortcutBinding,
-  settings: ShortcutSettings
-) => SHORTCUT_ACTION_OPTIONS.find((item) => item.value !== action && shortcutBindingsEqual(settings[item.value], binding));
+  settings: ShortcutSettings,
+  shortcutActionOptions: ReturnType<typeof getShortcutActionOptions>
+) => shortcutActionOptions.find((item) => item.value !== action && shortcutBindingsEqual(settings[item.value], binding));
 
 export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChange }: ShortcutSettingsItemProps) => {
+  const { t } = useTranslation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [recordingAction, setRecordingAction] = useState<ShortcutAction | null>(null);
   const [captureMessage, setCaptureMessage] = useState("");
   const captureButtonRef = useRef<HTMLButtonElement | null>(null);
+  const shortcutActionOptions = useMemo(() => getShortcutActionOptions(t), [t]);
 
   const shortcutSummary = useMemo(
     () =>
-      SHORTCUT_ACTION_OPTIONS.map((item) => formatShortcutBinding(shortcutSettings[item.value]))
+      shortcutActionOptions.map((item) => formatShortcutBinding(shortcutSettings[item.value]))
         .slice(0, 3)
         .join(" / "),
-    [shortcutSettings]
+    [shortcutActionOptions, shortcutSettings]
   );
 
   useEffect(() => {
@@ -69,13 +73,13 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
 
       const nextBinding = shortcutBindingFromKeyboardEvent(event);
       if (!nextBinding) {
-        setCaptureMessage("请按下包含 Ctrl、⌘ 或 Alt 的组合键。");
+        setCaptureMessage(t("shortcuts.requireModifier"));
         return;
       }
 
-      const conflictAction = getConflictAction(recordingAction, nextBinding, shortcutSettings);
+      const conflictAction = getConflictAction(recordingAction, nextBinding, shortcutSettings, shortcutActionOptions);
       if (conflictAction) {
-        setCaptureMessage(`这个组合键已用于「${conflictAction.label}」。`);
+        setCaptureMessage(t("shortcuts.conflict", { label: conflictAction.label }));
         return;
       }
 
@@ -89,7 +93,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [onShortcutSettingsChange, recordingAction, shortcutSettings]);
+  }, [onShortcutSettingsChange, recordingAction, shortcutActionOptions, shortcutSettings, t]);
 
   const handleResetShortcuts = () => {
     onShortcutSettingsChange(DEFAULT_SHORTCUT_SETTINGS);
@@ -103,7 +107,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <Keyboard className="h-4 w-4 text-emerald-700" />
-            绑定快捷键
+            {t("shortcuts.title")}
           </div>
           <div className="mt-0.5 truncate text-xs leading-4 text-slate-500">{shortcutSummary}</div>
         </div>
@@ -114,7 +118,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
           type="button"
           onClick={() => setShortcutsOpen(true)}
         >
-          管理
+          {t("shortcuts.manage")}
         </Button>
       </div>
 
@@ -123,13 +127,13 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Keyboard className="h-5 w-5 text-emerald-700" />
-              绑定快捷键
+              {t("shortcuts.title")}
             </DialogTitle>
-            <DialogDescription>为常用笔记动作设置组合键。按 Esc 可取消当前录制。</DialogDescription>
+            <DialogDescription>{t("shortcuts.description")}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
-            {SHORTCUT_ACTION_OPTIONS.map((item) => {
+            {shortcutActionOptions.map((item) => {
               const recording = recordingAction === item.value;
 
               return (
@@ -151,7 +155,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
                       setCaptureMessage("");
                     }}
                   >
-                    {recording ? "输入组合键" : formatShortcutBinding(shortcutSettings[item.value])}
+                    {recording ? t("shortcuts.recording") : formatShortcutBinding(shortcutSettings[item.value])}
                   </Button>
                 </div>
               );
@@ -167,7 +171,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleResetShortcuts}>
               <RotateCcw className="h-4 w-4" />
-              恢复默认
+              {t("shortcuts.reset")}
             </Button>
           </DialogFooter>
         </DialogContent>

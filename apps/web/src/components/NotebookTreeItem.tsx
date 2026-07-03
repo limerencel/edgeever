@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Notebook as NotebookIcon, Plus, Pencil, Trash2 } from "lucide-react";
 import type { NotebookNode, NotebookDropPosition } from "@/lib/app-helpers";
 import {
@@ -50,6 +51,7 @@ export const NotebookTreeItem = ({
   expandSiblingsRequest: { parentId: string | null; token: number } | null;
   onExpandSiblings: (parentId: string | null) => void;
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(true);
   const hasChildren = node.children.length > 0;
   const selected = node.id === selectedNotebookId;
@@ -167,7 +169,7 @@ export const NotebookTreeItem = ({
               event.dataTransfer.effectAllowed = "move";
               event.dataTransfer.setData(NOTEBOOK_DRAG_MIME, node.id);
               event.dataTransfer.setData("text/plain", node.id);
-              setMemoDragPreview(event.dataTransfer, `移动笔记本「${node.name}」`);
+              setMemoDragPreview(event.dataTransfer, t("notebookTree.dragNotebook", { name: node.name }));
             }}
             onDragOver={handleDragOver}
             onDragLeave={() => {
@@ -183,8 +185,8 @@ export const NotebookTreeItem = ({
                 className="flex h-6 w-5 items-center justify-center rounded hover:bg-slate-100/50 transition-colors"
                 type="button"
                 onClick={() => setOpen((value) => !value)}
-                title="展开/折叠"
-                aria-label={open ? `收起 ${node.name}` : `展开 ${node.name}`}
+                title={t("notebookTree.expandCollapse")}
+                aria-label={open ? t("notebookTree.collapse", { name: node.name }) : t("notebookTree.expand", { name: node.name })}
                 aria-expanded={open}
               >
                 {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -196,7 +198,7 @@ export const NotebookTreeItem = ({
               data-notebook-tree-button
               className="flex min-w-0 flex-1 items-center gap-2 text-left"
               type="button"
-              aria-label={selected ? `当前：${node.name}` : `切换到 ${node.name}`}
+              aria-label={selected ? t("notebookTree.current", { name: node.name }) : t("notebookTree.switchTo", { name: node.name })}
               aria-current={selected ? "page" : undefined}
               aria-expanded={hasChildren ? open : undefined}
               onClick={() => onSelect(node.id)}
@@ -242,8 +244,8 @@ export const NotebookTreeItem = ({
                 selected ? "hover:bg-slate-200" : "hover:bg-slate-100"
               )}
               type="button"
-              title="新建子笔记本"
-              aria-label={`在 ${node.name} 下新建子笔记本`}
+              title={t("notebookTree.newChild")}
+              aria-label={t("notebookTree.newChildAria", { name: node.name })}
               onClick={(event) => {
                 event.stopPropagation();
                 onCreateNotebook(node.id);
@@ -257,8 +259,8 @@ export const NotebookTreeItem = ({
                 selected ? "hover:bg-slate-200" : "hover:bg-slate-100"
               )}
               type="button"
-              title="重命名笔记本"
-              aria-label={`重命名 ${node.name}`}
+              title={t("notebookTree.renameNotebook")}
+              aria-label={t("notebookTree.renameAria", { name: node.name })}
               onClick={(event) => {
                 event.stopPropagation();
                 onRenameNotebook(node);
@@ -270,8 +272,8 @@ export const NotebookTreeItem = ({
               <button
                 className="hidden h-6 w-6 items-center justify-center rounded-md text-rose-600 hover:bg-rose-50 group-focus-within:flex group-hover:flex transition-colors duration-150"
                 type="button"
-                title="删除笔记本"
-                aria-label={`删除 ${node.name}`}
+                title={t("notebookTree.deleteNotebook")}
+                aria-label={t("notebookTree.deleteAria", { name: node.name })}
                 onClick={(event) => {
                   event.stopPropagation();
                   onDeleteNotebook(node);
@@ -294,14 +296,14 @@ export const NotebookTreeItem = ({
             onClick={() => onCreateNotebook(node.id)}
           >
             <Plus className="h-4 w-4" />
-            新建子笔记本
+            {t("notebookTree.newChild")}
           </ContextMenuItem>
           <ContextMenuItem
             className="flex h-9 items-center gap-2 px-3 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
             onClick={() => onRenameNotebook(node)}
           >
             <Pencil className="h-4 w-4" />
-            重命名
+            {t("notebookTree.rename")}
           </ContextMenuItem>
           {!isInbox && (
             <>
@@ -311,7 +313,7 @@ export const NotebookTreeItem = ({
                 onClick={() => onDeleteNotebook(node)}
               >
                 <Trash2 className="h-4 w-4" />
-                删除笔记本
+                {t("notebookTree.deleteNotebook")}
               </ContextMenuItem>
             </>
           )}

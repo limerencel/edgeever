@@ -2,6 +2,7 @@
 import { SEO } from "astro-seo";
 import Footer from "@/components/footer.astro";
 import Navbar from "@/components/navbar/navbar.astro";
+import { getLocalizedPath, getSiteLocale, siteCopy } from "@/i18n";
 import "@fontsource-variable/inter/index.css";
 import "@fontsource-variable/bricolage-grotesque";
 import "../styles/global.css";
@@ -22,15 +23,18 @@ export interface Props {
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
+const locale = getSiteLocale(Astro.url.pathname);
+const copy = siteCopy[locale].layout;
+const zhAlternateURL = new URL(getLocalizedPath("zh-CN", Astro.url.pathname), Astro.site).toString();
+const enAlternateURL = new URL(getLocalizedPath("en-US", Astro.url.pathname), Astro.site).toString();
 
-const defaultDescription =
-  "EdgeEver 是一个开源、自托管、Cloudflare-native 的现代笔记工作区。保留经典印象笔记的三栏体验，支持富文本、无限嵌套，原生支持 MCP 对 AI Agent 极度友好，个人托管接近零成本。";
+const defaultDescription = copy.defaultDescription;
 
 const {
   title,
   description = defaultDescription,
   image = "/opengraph.jpg",
-  imageAlt = "EdgeEver 笔记应用截图",
+  imageAlt = copy.imageAlt,
   openGraphType = "website",
   articlePublishedTime,
   articleModifiedTime,
@@ -45,17 +49,20 @@ const resolvedImageWithDomain = new URL(image, Astro.site).toString();
 
 const makeTitle = title
   ? title + " | " + "EdgeEver"
-  : "EdgeEver - 基于 Cloudflare 全家桶自托管的免费开源『印象笔记』";
+  : copy.defaultTitle;
 
 const faviconVersion = "edgeever-brand-20260703";
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang={locale}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/svg+xml" href={`/favicon.svg?v=${faviconVersion}`} />
+    <link rel="alternate" hreflang="zh-CN" href={zhAlternateURL} />
+    <link rel="alternate" hreflang="en-US" href={enAlternateURL} />
+    <link rel="alternate" hreflang="x-default" href={zhAlternateURL} />
     <meta name="theme-color" content="#f8fafc" />
     <meta name="generator" content={Astro.generator} />
 
@@ -83,7 +90,7 @@ const faviconVersion = "edgeever-brand-20260703";
         },
         optional: {
           description,
-          locale: "zh_CN",
+          locale: copy.ogLocale,
           siteName: "EdgeEver",
         },
         image: {

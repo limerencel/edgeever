@@ -1,29 +1,15 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, Copy, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { copyTextToClipboard } from "./settings-utils";
 
-const ADVANCED_PROMPTS = [
-  {
-    title: "人物画像",
-    prompt:
-      "请通过 EdgeEver MCP 读取我的笔记，基于真实笔记内容为我整理一份人物画像。请只根据笔记中的证据判断，不要做心理诊断，不要夸张定性。输出包括：长期关注的主题、做事偏好、能力线索、反复出现的问题、近期动向，并在每条结论后列出相关笔记标题或 memo id。",
-  },
-  {
-    title: "知识图谱",
-    prompt:
-      "请通过 EdgeEver MCP 读取我的笔记，为我整理一份知识地图。请找出主要知识领域、每个领域下的关键概念、相关笔记、我已经掌握的部分和还需要补齐的问题。输出结构要适合后续继续学习和写作。",
-  },
-  {
-    title: "标签建议",
-    prompt:
-      "请通过 EdgeEver MCP 读取我的笔记和现有标签，帮我设计一套更清晰的标签体系。请指出重复、过细、过宽或命名不一致的标签，并给出合并、重命名和新增标签建议。先不要修改笔记，等我确认后再执行。",
-  },
-] as const;
+const ADVANCED_PROMPT_KEYS = ["persona", "knowledgeMap", "tagAdvice"] as const;
 
 export const AdvancedPlayCard = () => {
+  const { t } = useTranslation();
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -50,10 +36,10 @@ export const AdvancedPlayCard = () => {
           <span className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-sm">
               <Sparkles className="h-4 w-4 text-emerald-700" />
-              进阶玩法
+              {t("advancedPlay.title")}
             </CardTitle>
             <CardDescription className="mt-1 text-xs leading-4">
-              搭配AI Agent的进阶玩法。
+              {t("advancedPlay.description")}
             </CardDescription>
           </span>
           <ChevronDown
@@ -66,24 +52,29 @@ export const AdvancedPlayCard = () => {
       </CardHeader>
       {expanded && (
         <CardContent className="grid gap-3 p-4 pt-0">
-          {ADVANCED_PROMPTS.map((item) => (
-            <div key={item.title} className="rounded-lg border border-slate-200 bg-white p-3">
+          {ADVANCED_PROMPT_KEYS.map((key) => {
+            const title = t(`advancedPlay.prompts.${key}.title`);
+            const prompt = t(`advancedPlay.prompts.${key}.prompt`);
+
+            return (
+            <div key={key} className="rounded-lg border border-slate-200 bg-white p-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm font-bold text-slate-900">{item.title}</div>
+                <div className="text-sm font-bold text-slate-900">{title}</div>
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-8 w-full justify-center bg-white px-3 text-xs sm:w-auto"
                   type="button"
-                  onClick={() => void handleCopyPrompt(item.title, item.prompt)}
+                  onClick={() => void handleCopyPrompt(title, prompt)}
                 >
                   <Copy className="h-3.5 w-3.5" />
-                  {copiedPrompt === item.title ? "已复制" : "复制 Prompt"}
+                  {copiedPrompt === title ? t("common.copied") : t("advancedPlay.copyPrompt")}
                 </Button>
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-500">{item.prompt}</p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{prompt}</p>
             </div>
-          ))}
+            );
+          })}
         </CardContent>
       )}
     </Card>

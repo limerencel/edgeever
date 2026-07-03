@@ -6,6 +6,9 @@ import Layout from "./Layout.astro";
 const { frontmatter } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site).toString();
 const imageUrl = new URL(frontmatter.image.src, Astro.site).toString();
+const isEnglish = Astro.url.pathname.startsWith("/en/");
+const blogHref = isEnglish ? "/en/blog" : "/blog";
+const backLabel = isEnglish ? "Back to blog" : "返回博客";
 
 const articleJsonLd = {
   "@context": "https://schema.org",
@@ -77,9 +80,9 @@ const articleJsonLd = {
     </div>
     <div class="text-center mt-8">
       <a
-        href="/blog"
+        href={blogHref}
         class="bg-gray-100 px-5 py-3 rounded-md hover:bg-gray-200 transition"
-        >返回博客</a
+        >{backLabel}</a
       >
     </div>
   </Container>

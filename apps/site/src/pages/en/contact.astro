@@ -1,0 +1,62 @@
+---
+import Container from "@/components/container.astro";
+import Sectionhead from "@/components/sectionhead.astro";
+import Layout from "@/layouts/Layout.astro";
+import { Icon } from "astro-icon/components";
+---
+
+<Layout
+  title="Contact"
+  description="EdgeEver contact and community links. Bugs, feature requests, and deployment issues are best tracked through GitHub Issues."
+>
+  <Container>
+    <Sectionhead>
+      <Fragment slot="title">Contact and Community</Fragment>
+      <Fragment slot="desc">Please use public channels for bugs, feature requests, and deployment issues so future users can find the full context.</Fragment>
+    </Sectionhead>
+
+    <div class="grid md:grid-cols-2 gap-12 mx-auto max-w-4xl mt-16 text-slate-700">
+      <div>
+        <h2 class="font-bold text-2xl text-gray-900">EdgeEver developer community</h2>
+        <p class="text-lg leading-relaxed text-slate-500 mt-4">
+          The core README recommends using GitHub Issues for bugs, feature requests, and deployment questions. This keeps solutions searchable and reusable for other self-hosters.
+        </p>
+        <div class="mt-6 space-y-4">
+          <div class="flex items-start space-x-3">
+            <Icon class="text-gray-600 w-6 h-6 shrink-0 mt-0.5" name="bx:bxl-github" />
+            <div>
+              <a href="https://github.com/msh01/edgeever/issues" target="_blank" class="font-semibold text-gray-900 hover:underline">
+                GitHub Issues
+              </a>
+              <p class="text-sm text-slate-500 mt-1">Best for software bugs, deployment problems, and concrete feature requests.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-50 p-8 rounded-lg border border-slate-100 flex flex-col justify-between">
+        <div>
+          <h2 class="font-bold text-xl text-gray-900">Other contact information</h2>
+          <p class="text-sm text-slate-500 mt-2">
+            For private communication, use the WeChat contact listed in the core README and mention EdgeEver when adding the contact.
+          </p>
+          <div class="mt-6 space-y-3">
+            <div class="flex items-center space-x-2.5">
+              <Icon class="text-gray-400 w-5 h-5" name="bx:bx-message-rounded" />
+              <span class="text-gray-600">WeChat: m1245207870</span>
+            </div>
+            <div class="flex items-center space-x-2.5">
+              <Icon class="text-gray-400 w-5 h-5" name="bx:bx-globe" />
+              <span class="text-gray-600">Primary domain: edgeever.org</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-8 pt-6 border-t border-slate-200">
+          <p class="text-xs text-slate-400 leading-normal">
+            Website content follows the sibling `edgeever` repository README, docs, and actual implementation.
+          </p>
+        </div>
+      </div>
+    </div>
+  </Container>
+</Layout>

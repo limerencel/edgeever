@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { History, RotateCcw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
@@ -36,14 +37,18 @@ const formatRevisionActor = (actor: string) => {
   return actor || "system";
 };
 
-export const RevisionPreview = ({ title, markdown }: { title: string; markdown: string }) => (
-  <div className="min-h-[260px] border-b border-slate-200 p-4 sm:border-b-0 sm:border-r">
-    <div className="mb-3 text-xs font-semibold uppercase text-slate-500">{title}</div>
-    <pre className="max-h-[54dvh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-      {markdown || "空笔记"}
-    </pre>
-  </div>
-);
+export const RevisionPreview = ({ title, markdown }: { title: string; markdown: string }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="min-h-[260px] border-b border-slate-200 p-4 sm:border-b-0 sm:border-r">
+      <div className="mb-3 text-xs font-semibold uppercase text-slate-500">{title}</div>
+      <pre className="max-h-[54dvh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+        {markdown || t("revisions.emptyMemo")}
+      </pre>
+    </div>
+  );
+};
 
 export const RevisionHistoryDialog = ({
   memo,
@@ -56,6 +61,7 @@ export const RevisionHistoryDialog = ({
   onClose: () => void;
   onRestored: (memo: MemoDetail) => Promise<void>;
 }) => {
+  const { t } = useTranslation();
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [restoreRevisionConfirmationId, setRestoreRevisionConfirmationId] = useState<string | null>(null);
 
@@ -94,7 +100,7 @@ export const RevisionHistoryDialog = ({
           <div className="min-w-0">
             <DialogTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
               <History className="h-4 w-4 text-emerald-700" />
-              版本历史
+              {t("revisions.title")}
             </DialogTitle>
             <DialogDescription className="mt-1 truncate text-xs text-slate-500">
               {getMemoTitle(memo.title)}
@@ -105,10 +111,10 @@ export const RevisionHistoryDialog = ({
         <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[280px_minmax(0,1fr)] sm:grid-rows-1">
           <aside className="min-h-0 border-b border-slate-200 p-3 sm:border-b-0 sm:border-r max-h-[220px] sm:max-h-[60vh] overflow-y-auto">
             {revisionsQuery.isLoading ? (
-              <div className="px-2 py-8 text-center text-sm text-slate-500">加载中</div>
+              <div className="px-2 py-8 text-center text-sm text-slate-500">{t("revisions.loading")}</div>
             ) : revisions.length === 0 ? (
               <div className="rounded-md border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
-                暂无历史版本
+                {t("revisions.empty")}
               </div>
             ) : (
               <div className="space-y-2">
@@ -141,7 +147,7 @@ export const RevisionHistoryDialog = ({
           <div className="flex min-h-0 flex-col">
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 bg-slate-50/50">
               <div className="text-xs font-medium text-slate-500">
-                {selectedRevision ? `${diffSummary.changed} changed lines` : "No revision selected"}
+                {selectedRevision ? t("revisions.changedLines", { count: diffSummary.changed }) : t("revisions.noRevisionSelected")}
               </div>
               <Button
                 size="sm"
@@ -154,13 +160,13 @@ export const RevisionHistoryDialog = ({
                 }}
               >
                 <RotateCcw className="h-4 w-4" />
-                恢复该版本
+                {t("revisions.restoreVersion")}
               </Button>
             </div>
 
             <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto sm:grid-cols-2 max-h-[50vh]">
-              <RevisionPreview title="历史版本" markdown={selectedRevision?.contentMarkdown ?? ""} />
-              <RevisionPreview title="当前内容" markdown={currentMarkdown} />
+              <RevisionPreview title={t("revisions.historyVersion")} markdown={selectedRevision?.contentMarkdown ?? ""} />
+              <RevisionPreview title={t("revisions.currentContent")} markdown={currentMarkdown} />
             </div>
           </div>
         </div>
@@ -168,9 +174,9 @@ export const RevisionHistoryDialog = ({
 
       {restoreRevisionConfirmationId && (
         <AppConfirmDialog
-          title="恢复到这个历史版本"
-          description="当前内容会被这个历史版本替换，恢复后仍会产生新的历史记录。"
-          confirmLabel="恢复"
+          title={t("revisions.restoreConfirmTitle")}
+          description={t("revisions.restoreConfirmDescription")}
+          confirmLabel={t("revisions.restoreConfirmLabel")}
           isWorking={restoreMutation.isPending}
           tone="primary"
           onCancel={() => setRestoreRevisionConfirmationId(null)}
