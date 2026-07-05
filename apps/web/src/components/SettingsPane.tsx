@@ -68,9 +68,9 @@ export const SettingsPane = ({
           />
           <AdvancedPlayCard />
           <EvernoteImportGuideCard onShowGuide={onShowGuide} />
-          <SystemInfoCard />
           <McpConfigCard />
           <SessionCard authRequired={authRequired} isLoggingOut={isLoggingOut} onLogout={onLogout} />
+          <SystemInfoCard />
         </div>
       </div>
     </div>
