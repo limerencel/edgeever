@@ -32,6 +32,7 @@ export const siteCopy = {
     nav: {
       homeAria: "EdgeEver 首页",
       features: "功能特性",
+      deploy: "安装部署",
       blog: "博客",
       contact: "联系我们",
       demo: "在线演示",
@@ -106,6 +107,7 @@ export const siteCopy = {
     nav: {
       homeAria: "EdgeEver home",
       features: "Features",
+      deploy: "Deploy",
       blog: "Blog",
       contact: "Contact",
       demo: "Demo",
