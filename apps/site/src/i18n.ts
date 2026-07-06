@@ -3,6 +3,10 @@ export type SiteLocale = "zh-CN" | "en-US";
 export const defaultSiteLocale: SiteLocale = "zh-CN";
 export const siteLocaleStorageKey = "edgeever.site.locale";
 export const siteLocaleDataAttribute = "data-edgeever-site-locale";
+export const siteTaglines = {
+  "zh-CN": "基于 Cloudflare 自托管的免费开源『印象笔记』，原生支持 AI Agent 接入",
+  "en-US": "A free, open-source Evernote alternative self-hosted on Cloudflare, with native AI Agent support.",
+} as const satisfies Record<SiteLocale, string>;
 
 export const getSiteLocale = (pathname: string): SiteLocale => (pathname === "/en" || pathname.startsWith("/en/") ? "en-US" : "zh-CN");
 
@@ -25,7 +29,7 @@ export const siteCopy = {
     layout: {
       defaultDescription:
         "EdgeEver 是一个开源、自托管、Cloudflare-native 的现代笔记工作区。保留经典印象笔记的三栏体验，支持富文本、无限嵌套，原生支持 MCP 对 AI Agent 极度友好，个人托管接近零成本。",
-      defaultTitle: "EdgeEver - 基于 Cloudflare 全家桶自托管的免费开源『印象笔记』",
+      defaultTitle: `EdgeEver - ${siteTaglines["zh-CN"]}`,
       imageAlt: "EdgeEver 笔记应用截图",
       ogLocale: "zh_CN",
     },
@@ -43,7 +47,7 @@ export const siteCopy = {
       languageMenu: "切换语言",
     },
     hero: {
-      slogan: "基于 Cloudflare 全家桶自托管的免费开源『印象笔记』",
+      slogan: siteTaglines["zh-CN"],
       demo: "在线演示",
       agentInstall: "通过AI Agent部署",
       imageAlt: "EdgeEver product preview",
@@ -128,7 +132,7 @@ export const siteCopy = {
     layout: {
       defaultDescription:
         "EdgeEver is an open-source, self-hosted, Cloudflare-native notes workspace with a classic three-pane workflow, rich text, nested notebooks, REST API, OpenAPI schema, and Remote MCP endpoint.",
-      defaultTitle: "EdgeEver - A self-hosted, Cloudflare-native Evernote alternative",
+      defaultTitle: `EdgeEver - ${siteTaglines["en-US"]}`,
       imageAlt: "EdgeEver notes app screenshot",
       ogLocale: "en_US",
     },
@@ -146,7 +150,7 @@ export const siteCopy = {
       languageMenu: "Change language",
     },
     hero: {
-      slogan: "A free, open-source Evernote alternative self-hosted on Cloudflare.",
+      slogan: siteTaglines["en-US"],
       demo: "Live demo",
       agentInstall: "Install with AI Agent",
       imageAlt: "EdgeEver product preview",

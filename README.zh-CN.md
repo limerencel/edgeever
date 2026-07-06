@@ -2,9 +2,9 @@
 
 简体中文 | [English](README.md)
 
-> **EdgeEver：基于 Cloudflare 全家桶自托管的免费开源『印象笔记』。**
+> **EdgeEver：基于 Cloudflare 自托管的免费开源『印象笔记』，原生支持 AI Agent 接入。**
 
-EdgeEver 是一个开源、自托管、Cloudflare-native 的现代笔记工作区。它保留经典印象笔记的三栏体验，同时提供清晰的数据模型、REST API、OpenAPI schema 和 MCP endpoint。
+EdgeEver 是一个开源、自托管、Cloudflare-native 的现代笔记工作区。它保留经典印象笔记的三栏体验，同时提供清晰的数据模型、REST API、OpenAPI schema 和 MCP endpoint，原生支持 AI Agent 接入。
 > 依托 Cloudflare 的免费额度，个人自部署后几乎可以永久零成本使用
 
 ## 为什么做 EdgeEver
