@@ -2,7 +2,7 @@
 
 简体中文 | [English](README.md)
 
-> **EdgeEver：无需服务器、0 费用、原生支持 AI Agent 的自托管『印象笔记』替代品。**
+> **EdgeEver：无需服务器、0 费用、开源且原生支持 AI Agent 的自托管『印象笔记』替代品。**
 
 EdgeEver 是一个开源、自托管、Cloudflare-native 的现代笔记工作区。它保留经典印象笔记的三栏体验，同时提供清晰的数据模型、REST API、OpenAPI schema 和 MCP endpoint，原生支持 AI Agent 接入。
 > 💡 **终身免服务器，100% 免费**

@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md) | English
 
-> **EdgeEver: A serverless, 100% free, and AI-native self-hosted Evernote alternative on Cloudflare.**
+> **EdgeEver: A serverless, 100% free, open-source, and AI-native self-hosted Evernote alternative on Cloudflare.**
 
 EdgeEver is an open-source, self-hosted, Cloudflare-native notes workspace. It keeps the classic Evernote-style three-pane experience while providing a clear data model, REST API, OpenAPI schema, Remote MCP endpoint, and native AI Agent integration.
 
