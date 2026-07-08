@@ -62,6 +62,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { ApiToken, MemoDetail, MemoRevision, MemoSummary, Notebook, ResourceListItem, TagSummary } from "@edgeever/shared";
 import { clearMobileMemoDraft, readMobileMemoDraft, writeMobileMemoDraft } from "../lib/mobile-drafts";
+import { readMobileMemoListDensity, writeMobileMemoListDensity, type MobileMemoListDensity } from "../lib/preferences";
 import { useSession } from "../lib/session";
 import {
   emptyMobileSyncQueueSummary,
@@ -171,6 +172,7 @@ export const WorkspaceScreen = () => {
   const [memoView, setMemoView] = useState<MemoView>("notebook");
   const [memoFilterMode, setMemoFilterMode] = useState<MemoFilterMode>("all");
   const [memoSortMode, setMemoSortMode] = useState<MemoSortMode>("updated-desc");
+  const [memoListDensity, setMemoListDensity] = useState<MobileMemoListDensity>("preview");
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -319,6 +321,25 @@ export const WorkspaceScreen = () => {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    readMobileMemoListDensity().then((density) => {
+      if (mounted) {
+        setMemoListDensity(density);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleMemoListDensityChange = (density: MobileMemoListDensity) => {
+    setMemoListDensity(density);
+    void writeMobileMemoListDensity(density);
+  };
 
   const invalidateWorkspace = async () => {
     await Promise.all([
@@ -545,6 +566,7 @@ export const WorkspaceScreen = () => {
           isRefreshing={isRefreshing}
           memoCount={memosQuery.data?.totalCount ?? memos.length}
           memoFilterMode={memoFilterMode}
+          memoListDensity={memoListDensity}
           memoSortMode={memoSortMode}
           memoView={memoView}
           memos={memos}
@@ -553,6 +575,7 @@ export const WorkspaceScreen = () => {
           onCreate={() => setCreateOpen(true)}
           onEmptyTrash={handleEmptyTrash}
           onFilterModeChange={setMemoFilterMode}
+          onMemoListDensityChange={handleMemoListDensityChange}
           onOpenTemplates={() => setTemplatesOpen(true)}
           onMemoPress={handleMemoPress}
           onMemoLongPress={toggleSelectedMemo}
@@ -757,6 +780,7 @@ const NotesView = ({
   isRefreshing,
   memoCount,
   memoFilterMode,
+  memoListDensity,
   memoSortMode,
   memoView,
   memos,
@@ -765,6 +789,7 @@ const NotesView = ({
   onCreate,
   onEmptyTrash,
   onFilterModeChange,
+  onMemoListDensityChange,
   onMemoLongPress,
   onMemoPress,
   onOpenTemplates,
@@ -783,6 +808,7 @@ const NotesView = ({
   isRefreshing: boolean;
   memoCount: number;
   memoFilterMode: MemoFilterMode;
+  memoListDensity: MobileMemoListDensity;
   memoSortMode: MemoSortMode;
   memoView: MemoView;
   memos: MemoSummary[];
@@ -791,6 +817,7 @@ const NotesView = ({
   onCreate: () => void;
   onEmptyTrash: () => void;
   onFilterModeChange: (filterMode: MemoFilterMode) => void;
+  onMemoListDensityChange: (density: MobileMemoListDensity) => void;
   onMemoLongPress: (memoId: string) => void;
   onMemoPress: (memoId: string) => void;
   onOpenTemplates: () => void;
@@ -863,6 +890,10 @@ const NotesView = ({
           <OptionPill active={memoSortMode === "created-desc"} label="创建时间" onPress={() => onSortModeChange("created-desc")} />
           <OptionPill active={memoSortMode === "title-asc"} label="标题 A-Z" onPress={() => onSortModeChange("title-asc")} />
         </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <OptionPill active={memoListDensity === "preview"} label="预览" onPress={() => onMemoListDensityChange("preview")} />
+          <OptionPill active={memoListDensity === "compact"} label="紧凑" onPress={() => onMemoListDensityChange("compact")} />
+        </ScrollView>
       </View>
     ) : null}
 
@@ -873,6 +904,7 @@ const NotesView = ({
       isError={isError}
       isLoading={isLoading}
       isRefreshing={isRefreshing}
+      listDensity={memoListDensity}
       memos={memos}
       onMemoLongPress={onMemoLongPress}
       onMemoPress={onMemoPress}
@@ -931,6 +963,7 @@ const SearchView = ({
         isError={false}
         isLoading={isLoading}
         isRefreshing={isRefreshing}
+        listDensity="preview"
         memos={results}
         onMemoPress={onMemoPress}
         onRefresh={onRefresh}
@@ -2805,6 +2838,7 @@ const MemoList = ({
   isError,
   isLoading,
   isRefreshing,
+  listDensity,
   memos,
   onMemoLongPress,
   onMemoPress,
@@ -2817,6 +2851,7 @@ const MemoList = ({
   isError: boolean;
   isLoading: boolean;
   isRefreshing: boolean;
+  listDensity: MobileMemoListDensity;
   memos: MemoSummary[];
   onMemoLongPress?: (memoId: string) => void;
   onMemoPress: (memoId: string) => void;
@@ -2849,6 +2884,7 @@ const MemoList = ({
       renderItem={({ item }) => (
         <MemoCard
           memo={item}
+          listDensity={listDensity}
           onLongPress={onMemoLongPress ? () => onMemoLongPress(item.id) : undefined}
           onPress={() => onMemoPress(item.id)}
           selected={selectedMemoIds.has(item.id)}
@@ -3034,19 +3070,21 @@ const OptionPill = ({ active, label, onPress }: { active: boolean; label: string
 );
 
 const MemoCard = ({
+  listDensity,
   memo,
   onLongPress,
   onPress,
   selected = false,
   selectionMode = false,
 }: {
+  listDensity: MobileMemoListDensity;
   memo: MemoSummary;
   onLongPress?: () => void;
   onPress: () => void;
   selected?: boolean;
   selectionMode?: boolean;
 }) => (
-  <Pressable onLongPress={onLongPress} onPress={onPress} style={[styles.memoCard, selected && styles.memoCardSelected]}>
+  <Pressable onLongPress={onLongPress} onPress={onPress} style={[styles.memoCard, listDensity === "compact" && styles.memoCardCompact, selected && styles.memoCardSelected]}>
     <View style={styles.memoCardTop}>
       {selectionMode ? (
         <View style={[styles.selectionIndicator, selected && styles.selectionIndicatorActive]}>
@@ -3060,10 +3098,12 @@ const MemoCard = ({
       </Text>
       {memo.isPinned ? <Text style={styles.pinText}>置顶</Text> : null}
     </View>
-    <Text numberOfLines={2} style={styles.memoExcerpt}>
-      {memo.excerpt || "没有正文预览"}
-    </Text>
-    <View style={styles.memoMeta}>
+    {listDensity === "preview" ? (
+      <Text numberOfLines={2} style={styles.memoExcerpt}>
+        {memo.excerpt || "没有正文预览"}
+      </Text>
+    ) : null}
+    <View style={[styles.memoMeta, listDensity === "compact" && styles.memoMetaCompact]}>
       <Text style={styles.memoDate}>{formatDate(memo.updatedAt)}</Text>
       {memo.tags.slice(0, 2).map((tag) => (
         <Text key={tag} style={styles.tag}>
@@ -3733,6 +3773,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 14,
   },
+  memoCardCompact: {
+    marginBottom: 8,
+    padding: 11,
+  },
   memoCardSelected: {
     backgroundColor: "#f8fafc",
     borderColor: "#0f172a",
@@ -3778,6 +3822,9 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginTop: 12,
+  },
+  memoMetaCompact: {
+    marginTop: 8,
   },
   memoDate: {
     color: "#94a3b8",
