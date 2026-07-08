@@ -62,7 +62,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { ApiToken, MemoDetail, MemoRevision, MemoSummary, Notebook, ResourceListItem, TagSummary } from "@edgeever/shared";
 import { clearMobileMemoDraft, readMobileMemoDraft, writeMobileMemoDraft } from "../lib/mobile-drafts";
-import { readMobileMemoListDensity, writeMobileMemoListDensity, type MobileMemoListDensity } from "../lib/preferences";
+import {
+  readMobileMemoListDensity,
+  readMobileNotebookSort,
+  writeMobileMemoListDensity,
+  writeMobileNotebookSort,
+  type MobileMemoListDensity,
+  type MobileNotebookSortPreference,
+} from "../lib/preferences";
 import { useSession } from "../lib/session";
 import {
   emptyMobileSyncQueueSummary,
@@ -157,7 +164,7 @@ type NotebookOption = {
   notebook: Notebook;
   depth: number;
 };
-type MobileNotebookSortMode = "manual" | "name-asc" | "memo-count-desc" | "updated-desc";
+type MobileNotebookSortMode = MobileNotebookSortPreference;
 type TextSelection = {
   start: number;
   end: number;
@@ -173,6 +180,7 @@ export const WorkspaceScreen = () => {
   const [memoFilterMode, setMemoFilterMode] = useState<MemoFilterMode>("all");
   const [memoSortMode, setMemoSortMode] = useState<MemoSortMode>("updated-desc");
   const [memoListDensity, setMemoListDensity] = useState<MobileMemoListDensity>("preview");
+  const [notebookSortMode, setNotebookSortMode] = useState<MobileNotebookSortMode>("manual");
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -336,9 +344,28 @@ export const WorkspaceScreen = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    readMobileNotebookSort().then((sortMode) => {
+      if (mounted) {
+        setNotebookSortMode(sortMode);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const handleMemoListDensityChange = (density: MobileMemoListDensity) => {
     setMemoListDensity(density);
     void writeMobileMemoListDensity(density);
+  };
+
+  const handleNotebookSortModeChange = (sortMode: MobileNotebookSortMode) => {
+    setNotebookSortMode(sortMode);
+    void writeMobileNotebookSort(sortMode);
   };
 
   const invalidateWorkspace = async () => {
@@ -570,6 +597,7 @@ export const WorkspaceScreen = () => {
           memoSortMode={memoSortMode}
           memoView={memoView}
           memos={memos}
+          notebookSortMode={notebookSortMode}
           notebooks={notebooks}
           notebooksMemoCount={memoCount}
           onCreate={() => setCreateOpen(true)}
@@ -655,7 +683,13 @@ export const WorkspaceScreen = () => {
         updateMutation={updateMemoMutation}
       />
 
-      <NotebookManagerModal notebooks={notebooks} onClose={() => setNotebookManagerOpen(false)} visible={notebookManagerOpen} />
+      <NotebookManagerModal
+        notebookSortMode={notebookSortMode}
+        notebooks={notebooks}
+        onClose={() => setNotebookManagerOpen(false)}
+        onSortModeChange={handleNotebookSortModeChange}
+        visible={notebookManagerOpen}
+      />
       <TagsManagerModal onClose={() => setTagsManagerOpen(false)} visible={tagsManagerOpen} />
       <ResourcesModal activeMemo={selectedMemo} onClose={() => setResourcesOpen(false)} visible={resourcesOpen} />
       <ApiTokensModal baseUrl={session?.baseUrl ?? ""} onClose={() => setApiTokensOpen(false)} visible={apiTokensOpen} />
@@ -784,6 +818,7 @@ const NotesView = ({
   memoSortMode,
   memoView,
   memos,
+  notebookSortMode,
   notebooks,
   notebooksMemoCount,
   onCreate,
@@ -812,6 +847,7 @@ const NotesView = ({
   memoSortMode: MemoSortMode;
   memoView: MemoView;
   memos: MemoSummary[];
+  notebookSortMode: MobileNotebookSortMode;
   notebooks: Notebook[];
   notebooksMemoCount: number;
   onCreate: () => void;
@@ -833,7 +869,7 @@ const NotesView = ({
       <View style={styles.tabs}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <NotebookPill active={activeNotebookId === ALL_NOTES_ID} label="全部笔记" memoCount={notebooksMemoCount} onPress={() => onSelectNotebook(ALL_NOTES_ID)} />
-          {flattenNotebooks(notebooks).map(({ depth, notebook }) => (
+          {flattenNotebooks(notebooks, notebookSortMode).map(({ depth, notebook }) => (
             <NotebookPill
               active={activeNotebookId === notebook.id}
               key={notebook.id}
@@ -1262,7 +1298,19 @@ const TemplatesModal = ({
   );
 };
 
-const NotebookManagerModal = ({ notebooks, onClose, visible }: { notebooks: Notebook[]; onClose: () => void; visible: boolean }) => {
+const NotebookManagerModal = ({
+  notebookSortMode,
+  notebooks,
+  onClose,
+  onSortModeChange,
+  visible,
+}: {
+  notebookSortMode: MobileNotebookSortMode;
+  notebooks: Notebook[];
+  onClose: () => void;
+  onSortModeChange: (sortMode: MobileNotebookSortMode) => void;
+  visible: boolean;
+}) => {
   const { client } = useSession();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -1271,7 +1319,6 @@ const NotebookManagerModal = ({ notebooks, onClose, visible }: { notebooks: Note
   const [editingName, setEditingName] = useState("");
   const [editingParentId, setEditingParentId] = useState<string | null>(null);
   const [notebookSearchText, setNotebookSearchText] = useState("");
-  const [notebookSortMode, setNotebookSortMode] = useState<MobileNotebookSortMode>("manual");
   const notebookOptions = flattenNotebooks(notebooks, notebookSortMode);
   const visibleNotebookOptions = filterNotebookOptions(notebookOptions, notebookSearchText);
 
@@ -1399,10 +1446,10 @@ const NotebookManagerModal = ({ notebooks, onClose, visible }: { notebooks: Note
             ) : null}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <OptionPill active={notebookSortMode === "manual"} label="手动排序" onPress={() => setNotebookSortMode("manual")} />
-            <OptionPill active={notebookSortMode === "name-asc"} label="名称 A-Z" onPress={() => setNotebookSortMode("name-asc")} />
-            <OptionPill active={notebookSortMode === "memo-count-desc"} label="笔记数量" onPress={() => setNotebookSortMode("memo-count-desc")} />
-            <OptionPill active={notebookSortMode === "updated-desc"} label="最近更新" onPress={() => setNotebookSortMode("updated-desc")} />
+            <OptionPill active={notebookSortMode === "manual"} label="手动排序" onPress={() => onSortModeChange("manual")} />
+            <OptionPill active={notebookSortMode === "name-asc"} label="名称 A-Z" onPress={() => onSortModeChange("name-asc")} />
+            <OptionPill active={notebookSortMode === "memo-count-desc"} label="笔记数量" onPress={() => onSortModeChange("memo-count-desc")} />
+            <OptionPill active={notebookSortMode === "updated-desc"} label="最近更新" onPress={() => onSortModeChange("updated-desc")} />
           </ScrollView>
           {visibleNotebookOptions.map(({ depth, notebook }) => {
             const editing = editingNotebookId === notebook.id;
