@@ -3844,10 +3844,14 @@ const MoveSelectionModal = ({
   visible: boolean;
 }) => {
   const [targetNotebookId, setTargetNotebookId] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const notebookOptions = flattenNotebooks(notebooks);
+  const visibleNotebookOptions = filterNotebookOptions(notebookOptions, searchText);
 
   useEffect(() => {
     if (visible) {
       setTargetNotebookId(notebooks[0]?.id ?? "");
+      setSearchText("");
     }
   }, [notebooks, visible]);
 
@@ -3866,22 +3870,45 @@ const MoveSelectionModal = ({
 
         <ScrollView contentContainerStyle={styles.editorForm}>
           <Text style={styles.sectionSubtitle}>已选择 {selectedCount} 条笔记</Text>
+          <View style={styles.searchBox}>
+            <Search color="#64748b" size={18} />
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              onChangeText={setSearchText}
+              placeholder="搜索笔记本"
+              placeholderTextColor="#94a3b8"
+              style={styles.searchInput}
+              value={searchText}
+            />
+            {searchText ? (
+              <Pressable onPress={() => setSearchText("")}>
+                <X color="#64748b" size={18} />
+              </Pressable>
+            ) : null}
+          </View>
           <Text style={styles.label}>目标笔记本</Text>
-          {notebooks.map((notebook) => (
+          {visibleNotebookOptions.map(({ depth, notebook }) => (
             <Pressable
               key={notebook.id}
               onPress={() => setTargetNotebookId(notebook.id)}
-              style={[styles.moveNotebookRow, targetNotebookId === notebook.id && styles.moveNotebookRowActive]}
+              style={[styles.moveNotebookRow, targetNotebookId === notebook.id && styles.moveNotebookRowActive, depth > 0 && { marginLeft: Math.min(depth * 14, 42) }]}
             >
               <View style={styles.moveNotebookText}>
                 <Text numberOfLines={1} style={styles.panelValue}>
-                  {notebook.name}
+                  {depth > 0 ? `${"· ".repeat(depth)}${notebook.name}` : notebook.name}
                 </Text>
                 <Text style={styles.panelLabel}>{notebook.memoCount} 条笔记</Text>
               </View>
               {targetNotebookId === notebook.id ? <Check color="#0f172a" size={18} /> : null}
             </Pressable>
           ))}
+          {visibleNotebookOptions.length === 0 ? (
+            <View style={styles.emptyInlinePanel}>
+              <Folder color="#94a3b8" size={28} />
+              <Text style={styles.mutedText}>没有匹配的笔记本</Text>
+            </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </Modal>
