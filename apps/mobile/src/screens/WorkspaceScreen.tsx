@@ -59,6 +59,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { ApiToken, MemoDetail, MemoRevision, MemoSummary, Notebook, ResourceListItem, TagSummary } from "@edgeever/shared";
 import { useSession } from "../lib/session";
+import {
+  emptyMobileSyncQueueSummary,
+  loadMobileSyncQueueSummary,
+  queueMobileMemoUpdate,
+  shouldQueueMobileMemoSaveError,
+  syncMobileQueuedChanges,
+  type MobileSyncQueueSummary,
+} from "../lib/sync-queue";
 
 const ALL_NOTES_ID = "all";
 const DEFAULT_MEMO_TITLE = "无标题笔记";
@@ -153,6 +161,9 @@ export const WorkspaceScreen = () => {
   const [revisionMemo, setRevisionMemo] = useState<MemoDetail | null>(null);
   const [selectedMemoIds, setSelectedMemoIds] = useState<Set<string>>(() => new Set());
   const [selectionMoveOpen, setSelectionMoveOpen] = useState(false);
+  const [syncQueueSummary, setSyncQueueSummary] = useState<MobileSyncQueueSummary>(() => emptyMobileSyncQueueSummary());
+  const [syncQueueMessage, setSyncQueueMessage] = useState("");
+  const [isSyncingQueue, setIsSyncingQueue] = useState(false);
 
   const notebooksQuery = useQuery({
     queryKey: ["mobile", "notebooks"],
@@ -222,6 +233,7 @@ export const WorkspaceScreen = () => {
       queryClient.invalidateQueries({ queryKey: ["mobile", "search"] }),
       queryClient.invalidateQueries({ queryKey: ["mobile", "memo"] }),
     ]);
+    setSyncQueueSummary(await loadMobileSyncQueueSummary());
   };
 
   const handleMemoPress = (memoId: string) => {
@@ -268,6 +280,20 @@ export const WorkspaceScreen = () => {
   useEffect(() => {
     clearSelection();
   }, [activeNotebookId, memoFilterMode, memoSortMode, memoView]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadMobileSyncQueueSummary().then((summary) => {
+      if (mounted) {
+        setSyncQueueSummary(summary);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const invalidateWorkspace = async () => {
     await Promise.all([
@@ -456,6 +482,32 @@ export const WorkspaceScreen = () => {
     ]);
   };
 
+  const handleSyncQueuedChanges = async () => {
+    if (!client || isSyncingQueue) {
+      return;
+    }
+
+    setIsSyncingQueue(true);
+    setSyncQueueMessage("");
+
+    try {
+      const result = await syncMobileQueuedChanges(client, {
+        onSynced: async (memo) => {
+          queryClient.setQueryData(["mobile", "memo", "notebook", memo.id], { memo });
+          queryClient.setQueryData(["mobile", "memo", "trash", memo.id], { memo });
+        },
+      });
+      await invalidateWorkspace();
+      setSyncQueueSummary(await loadMobileSyncQueueSummary());
+      setSyncQueueMessage(result.attempted === 0 ? "没有可同步的变更" : `已同步 ${result.synced} 条，失败 ${result.failed + result.conflicted} 条`);
+    } catch (error) {
+      setSyncQueueSummary(await loadMobileSyncQueueSummary());
+      setSyncQueueMessage(error instanceof Error ? error.message : "同步失败");
+    } finally {
+      setIsSyncingQueue(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <AppHeader instance={session?.baseUrl ?? ""} onRefresh={refresh} onSignOut={signOut} />
@@ -515,6 +567,10 @@ export const WorkspaceScreen = () => {
           onOpenSystemInfo={() => setSystemInfoOpen(true)}
           onOpenTagsManager={() => setTagsManagerOpen(true)}
           onOpenTemplates={() => setTemplatesOpen(true)}
+          onSyncQueuedChanges={handleSyncQueuedChanges}
+          syncQueueMessage={syncQueueMessage}
+          syncQueueSummary={syncQueueSummary}
+          isSyncingQueue={isSyncingQueue}
         />
       ) : null}
 
@@ -538,6 +594,11 @@ export const WorkspaceScreen = () => {
         memo={editingMemo}
         notebooks={notebooks}
         onClose={() => setEditingMemo(null)}
+        onQueued={async () => {
+          setEditingMemo(null);
+          setSyncQueueSummary(await loadMobileSyncQueueSummary());
+          setSyncQueueMessage("变更已保存到本地队列");
+        }}
         onSaved={(memo) => {
           setEditingMemo(null);
           setSelectedMemoId(memo.id);
@@ -870,6 +931,7 @@ const AccountView = ({ instance, userName, onSignOut }: { instance: string; user
 );
 
 const SettingsView = ({
+  isSyncingQueue,
   memoCount,
   notebookCount,
   onOpenApiTokens,
@@ -879,7 +941,11 @@ const SettingsView = ({
   onOpenSystemInfo,
   onOpenTagsManager,
   onOpenTemplates,
+  onSyncQueuedChanges,
+  syncQueueMessage,
+  syncQueueSummary,
 }: {
+  isSyncingQueue: boolean;
   memoCount: number;
   notebookCount: number;
   onOpenApiTokens: () => void;
@@ -889,6 +955,9 @@ const SettingsView = ({
   onOpenSystemInfo: () => void;
   onOpenTagsManager: () => void;
   onOpenTemplates: () => void;
+  onSyncQueuedChanges: () => void;
+  syncQueueMessage: string;
+  syncQueueSummary: MobileSyncQueueSummary;
 }) => (
   <ScrollView contentContainerStyle={styles.panelList} style={styles.viewBody}>
     <Text style={styles.sectionTitle}>设置</Text>
@@ -916,7 +985,7 @@ const SettingsView = ({
     <PanelRow label="移动端形态" value="React Native" />
     <PanelRow label="笔记本数量" value={String(notebookCount)} />
     <PanelRow label="笔记总数" value={String(memoCount)} />
-    <PanelRow label="离线同步" value="待接入" />
+    <SyncQueuePanel isSyncing={isSyncingQueue} message={syncQueueMessage} onSync={onSyncQueuedChanges} summary={syncQueueSummary} />
     <PanelRow label="富文本编辑器" value="待接入 WebView TipTap" />
   </ScrollView>
 );
@@ -2396,12 +2465,14 @@ const EditMemoModal = ({
   memo,
   notebooks,
   onClose,
+  onQueued,
   onSaved,
   updateMutation,
 }: {
   memo: MemoDetail | null;
   notebooks: Notebook[];
   onClose: () => void;
+  onQueued: () => void | Promise<void>;
   onSaved: (memo: MemoDetail) => void;
   updateMutation: UseMutationResult<
     MemoDetail,
@@ -2451,6 +2522,22 @@ const EditMemoModal = ({
       },
       {
         onSuccess: onSaved,
+        onError: async (error) => {
+          if (!shouldQueueMobileMemoSaveError(error)) {
+            return;
+          }
+
+          await queueMobileMemoUpdate({
+            memoId: memo.id,
+            expectedRevision: memo.revision,
+            title: title.trim() || DEFAULT_MEMO_TITLE,
+            contentMarkdown,
+            notebookId,
+            tags: parseTags(tagsText),
+          });
+          await onQueued();
+          Alert.alert("已保存到本地队列", "网络恢复后可在设置页手动同步。");
+        },
       }
     );
   };
@@ -2801,6 +2888,33 @@ const PanelRow = ({ label, value }: { label: string; value: string }) => (
     </Text>
   </View>
 );
+
+const SyncQueuePanel = ({
+  isSyncing,
+  message,
+  onSync,
+  summary,
+}: {
+  isSyncing: boolean;
+  message: string;
+  onSync: () => void;
+  summary: MobileSyncQueueSummary;
+}) => {
+  const hasQueuedChanges = summary.total > 0;
+  const value = hasQueuedChanges ? `${summary.pending} 待同步 · ${summary.syncing} 同步中 · ${summary.error} 失败 · ${summary.conflict} 冲突` : "无待同步变更";
+
+  return (
+    <View style={styles.panelRow}>
+      <Text style={styles.panelLabel}>离线同步</Text>
+      <Text style={styles.panelValue}>{value}</Text>
+      {message ? <Text style={styles.panelHint}>{message}</Text> : null}
+      <Pressable disabled={isSyncing || !hasQueuedChanges} onPress={onSync} style={[styles.syncButton, (isSyncing || !hasQueuedChanges) && styles.buttonDisabled]}>
+        {isSyncing ? <ActivityIndicator color="#ffffff" /> : <RefreshCw color="#ffffff" size={16} />}
+        <Text style={styles.syncButtonText}>{isSyncing ? "同步中" : "立即同步"}</Text>
+      </Pressable>
+    </View>
+  );
+};
 
 const IconButton = ({ children, onPress }: { children: ReactNode; onPress: () => void }) => (
   <Pressable accessibilityRole="button" onPress={onPress} style={styles.iconButton}>
@@ -3513,6 +3627,27 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     fontSize: 15,
     fontWeight: "700",
+  },
+  panelHint: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  syncButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#0f172a",
+    borderRadius: 8,
+    flexDirection: "row",
+    gap: 8,
+    minHeight: 38,
+    paddingHorizontal: 12,
+  },
+  syncButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "800",
   },
   dangerButton: {
     alignItems: "center",

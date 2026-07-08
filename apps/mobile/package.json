@@ -15,6 +15,7 @@
     "@edgeever/client": "workspace:*",
     "@edgeever/shared": "workspace:*",
     "@gorhom/bottom-sheet": "latest",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@tanstack/react-query": "latest",
     "expo": "latest",
     "expo-clipboard": "~57.0.0",
