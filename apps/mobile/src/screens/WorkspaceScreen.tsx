@@ -4937,7 +4937,7 @@ const SyncQueuePanel = ({
   summary: MobileSyncQueueSummary;
 }) => {
   const hasQueuedChanges = summary.total > 0;
-  const value = hasQueuedChanges ? `${summary.pending} 待同步 · ${summary.syncing} 同步中 · ${summary.error} 失败 · ${summary.conflict} 冲突` : "无待同步变更";
+  const value = getSyncQueueSummaryLabel(summary, isSyncing);
 
   return (
     <View style={styles.panelRow}>
@@ -5702,6 +5702,26 @@ const getSyncQueueStatusLabel = (status: MobileSyncQueueItem["status"]) => {
   };
 
   return labels[status];
+};
+
+const getSyncQueueSummaryLabel = (summary: MobileSyncQueueSummary, isSyncing: boolean) => {
+  if (isSyncing || summary.syncing > 0) {
+    return "同步中";
+  }
+
+  if (summary.conflict > 0) {
+    return `${summary.conflict} 项同步冲突`;
+  }
+
+  if (summary.error > 0) {
+    return `${summary.error} 项等待重试`;
+  }
+
+  if (summary.pending > 0) {
+    return `${summary.pending} 项待同步`;
+  }
+
+  return "已同步";
 };
 
 const getSyncQueueStatusStyle = (status: MobileSyncQueueItem["status"]) => {
