@@ -6,21 +6,29 @@ import type { MemoFilterMode, MemoSortMode } from "@edgeever/client";
 import {
   Archive,
   BookOpen,
+  Bold,
   Check,
+  CheckSquare,
+  Code,
   Copy,
   ExternalLink,
   FileText,
   Folder,
   HardDrive,
+  Heading2,
   History,
   Home,
   Image as ImageIcon,
+  Italic,
   KeyRound,
+  Link,
+  List,
   LogOut,
   Merge,
   Pencil,
   Pin,
   Plus,
+  Quote,
   RefreshCw,
   RotateCcw,
   Search,
@@ -117,6 +125,11 @@ type NotebookOption = {
   depth: number;
 };
 type MobileNotebookSortMode = "manual" | "name-asc" | "memo-count-desc" | "updated-desc";
+type TextSelection = {
+  start: number;
+  end: number;
+};
+type MarkdownAction = "heading" | "bold" | "italic" | "bullet" | "checklist" | "quote" | "code" | "link";
 
 export const WorkspaceScreen = () => {
   const { client, session, signOut } = useSession();
@@ -927,6 +940,7 @@ const CreateMemoModal = ({
   const [notebookId, setNotebookId] = useState(fallbackNotebookId);
   const [title, setTitle] = useState("");
   const [contentMarkdown, setContentMarkdown] = useState("");
+  const [contentSelection, setContentSelection] = useState<TextSelection>({ start: 0, end: 0 });
 
   useEffect(() => {
     if (visible) {
@@ -996,11 +1010,20 @@ const CreateMemoModal = ({
           <TextInput onChangeText={setTitle} placeholder={DEFAULT_MEMO_TITLE} placeholderTextColor="#94a3b8" style={styles.titleInput} value={title} />
 
           <Text style={styles.label}>正文</Text>
+          <MarkdownToolbar
+            onAction={(action) => {
+              const next = applyMarkdownAction(contentMarkdown, contentSelection, action);
+              setContentMarkdown(next.value);
+              setContentSelection(next.selection);
+            }}
+          />
           <TextInput
             multiline
             onChangeText={setContentMarkdown}
+            onSelectionChange={(event) => setContentSelection(event.nativeEvent.selection)}
             placeholder="先用 Markdown 写入，后续接入移动 PWA 的 TipTap 编辑器"
             placeholderTextColor="#94a3b8"
+            selection={contentSelection}
             style={styles.markdownInput}
             textAlignVertical="top"
             value={contentMarkdown}
@@ -2397,6 +2420,7 @@ const EditMemoModal = ({
 }) => {
   const [title, setTitle] = useState("");
   const [contentMarkdown, setContentMarkdown] = useState("");
+  const [contentSelection, setContentSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [notebookId, setNotebookId] = useState("");
   const [tagsText, setTagsText] = useState("");
 
@@ -2404,6 +2428,7 @@ const EditMemoModal = ({
     if (memo) {
       setTitle(memo.title?.trim() || "");
       setContentMarkdown(memo.contentMarkdown || "");
+      setContentSelection({ start: 0, end: 0 });
       setNotebookId(memo.notebookId);
       setTagsText(memo.tags.join(", "));
     }
@@ -2464,11 +2489,20 @@ const EditMemoModal = ({
           <TextInput onChangeText={setTagsText} placeholder="用逗号分隔标签" placeholderTextColor="#94a3b8" style={styles.titleInput} value={tagsText} />
 
           <Text style={styles.label}>正文</Text>
+          <MarkdownToolbar
+            onAction={(action) => {
+              const next = applyMarkdownAction(contentMarkdown, contentSelection, action);
+              setContentMarkdown(next.value);
+              setContentSelection(next.selection);
+            }}
+          />
           <TextInput
             multiline
             onChangeText={setContentMarkdown}
+            onSelectionChange={(event) => setContentSelection(event.nativeEvent.selection)}
             placeholder="Markdown 正文"
             placeholderTextColor="#94a3b8"
+            selection={contentSelection}
             style={styles.markdownInput}
             textAlignVertical="top"
             value={contentMarkdown}
@@ -2800,6 +2834,26 @@ const BottomNavItem = ({ active = false, icon, label, onPress }: { active?: bool
   </Pressable>
 );
 
+const MarkdownToolbar = ({ onAction }: { onAction: (action: MarkdownAction) => void }) => (
+  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.markdownToolbar}>
+    <MarkdownToolbarButton icon={<Heading2 color="#334155" size={15} />} label="标题" onPress={() => onAction("heading")} />
+    <MarkdownToolbarButton icon={<Bold color="#334155" size={15} />} label="加粗" onPress={() => onAction("bold")} />
+    <MarkdownToolbarButton icon={<Italic color="#334155" size={15} />} label="斜体" onPress={() => onAction("italic")} />
+    <MarkdownToolbarButton icon={<List color="#334155" size={15} />} label="列表" onPress={() => onAction("bullet")} />
+    <MarkdownToolbarButton icon={<CheckSquare color="#334155" size={15} />} label="待办" onPress={() => onAction("checklist")} />
+    <MarkdownToolbarButton icon={<Quote color="#334155" size={15} />} label="引用" onPress={() => onAction("quote")} />
+    <MarkdownToolbarButton icon={<Code color="#334155" size={15} />} label="代码" onPress={() => onAction("code")} />
+    <MarkdownToolbarButton icon={<Link color="#334155" size={15} />} label="链接" onPress={() => onAction("link")} />
+  </ScrollView>
+);
+
+const MarkdownToolbarButton = ({ icon, label, onPress }: { icon: ReactNode; label: string; onPress: () => void }) => (
+  <Pressable onPress={onPress} style={styles.markdownToolButton}>
+    {icon}
+    <Text style={styles.markdownToolText}>{label}</Text>
+  </Pressable>
+);
+
 const parseTags = (value: string) =>
   Array.from(
     new Set(
@@ -2809,6 +2863,78 @@ const parseTags = (value: string) =>
         .filter(Boolean)
     )
   );
+
+const applyMarkdownAction = (value: string, selection: TextSelection, action: MarkdownAction) => {
+  const start = Math.max(0, Math.min(selection.start, value.length));
+  const end = Math.max(start, Math.min(selection.end, value.length));
+  const selectedText = value.slice(start, end);
+
+  if (action === "heading") {
+    return prefixSelectedLines(value, start, end, "## ");
+  }
+
+  if (action === "bullet") {
+    return prefixSelectedLines(value, start, end, "- ");
+  }
+
+  if (action === "checklist") {
+    return prefixSelectedLines(value, start, end, "- [ ] ");
+  }
+
+  if (action === "quote") {
+    return prefixSelectedLines(value, start, end, "> ");
+  }
+
+  if (action === "bold") {
+    return wrapSelectedText(value, start, end, "**", "**", "加粗文本");
+  }
+
+  if (action === "italic") {
+    return wrapSelectedText(value, start, end, "*", "*", "斜体文本");
+  }
+
+  if (action === "link") {
+    return wrapSelectedText(value, start, end, "[", "](https://)", "链接文本");
+  }
+
+  if (selectedText.includes("\n")) {
+    return wrapSelectedText(value, start, end, "\n```\n", "\n```\n", selectedText || "代码块");
+  }
+
+  return wrapSelectedText(value, start, end, "`", "`", "代码");
+};
+
+const wrapSelectedText = (value: string, start: number, end: number, before: string, after: string, fallbackText: string) => {
+  const selectedText = value.slice(start, end) || fallbackText;
+  const replacement = `${before}${selectedText}${after}`;
+  const nextValue = replaceRange(value, start, end, replacement);
+  const selectedStart = start + before.length;
+  const selectedEnd = selectedStart + selectedText.length;
+
+  return {
+    value: nextValue,
+    selection: { start: selectedStart, end: selectedEnd },
+  };
+};
+
+const prefixSelectedLines = (value: string, start: number, end: number, prefix: string) => {
+  const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+  const nextLineBreak = value.indexOf("\n", end);
+  const lineEnd = nextLineBreak === -1 ? value.length : nextLineBreak;
+  const block = value.slice(lineStart, lineEnd) || "";
+  const replacement = block
+    .split("\n")
+    .map((line) => (line.startsWith(prefix) ? line : `${prefix}${line}`))
+    .join("\n");
+  const nextValue = replaceRange(value, lineStart, lineEnd, replacement);
+
+  return {
+    value: nextValue,
+    selection: { start: lineStart, end: lineStart + replacement.length },
+  };
+};
+
+const replaceRange = (value: string, start: number, end: number, replacement: string) => `${value.slice(0, start)}${replacement}${value.slice(end)}`;
 
 const flattenNotebooks = (notebooks: Notebook[], sortMode: MobileNotebookSortMode = "manual") => {
   const byParent = new Map<string | null, Notebook[]>();
@@ -3748,6 +3874,26 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     minHeight: 260,
     padding: 14,
+  },
+  markdownToolbar: {
+    flexGrow: 0,
+  },
+  markdownToolButton: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 5,
+    marginRight: 8,
+    minHeight: 34,
+    paddingHorizontal: 10,
+  },
+  markdownToolText: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "800",
   },
   bottomNav: {
     alignItems: "center",
