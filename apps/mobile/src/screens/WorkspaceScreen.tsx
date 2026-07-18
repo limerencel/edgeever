@@ -118,7 +118,7 @@ import {
   upsertLocalMemo,
 } from "../lib/local-mirror";
 import { AccountSecurityPanel } from "./AccountSecurityModal";
-import { markStartup, recordEditorStartup } from "../lib/startup-performance";
+import { beginEditorStartup, markStartup, recordEditorStartup } from "../lib/startup-performance";
 import LocalTiptapEditor, { type LocalTiptapEditorRef } from "../components/LocalTiptapEditor";
 import { resolveMobileThemeStyles, useMobileTheme, type MobileResolvedTheme } from "../lib/mobile-theme";
 
@@ -4326,9 +4326,11 @@ const MemoDetailModal = ({
             <ChevronLeft color="#475569" size={21} />
           </Pressable>
           <Text style={styles.detailSyncStatus}>{isSaving ? "保存中" : "已同步"}</Text>
-          <Pressable accessibilityLabel="笔记操作" accessibilityRole="button" onPress={() => setActionsOpen(true)} style={styles.detailHeaderButton}>
-            <MoreHorizontal color="#475569" size={21} />
-          </Pressable>
+          {memo?.isDeleted ? (
+            <Pressable accessibilityLabel="笔记操作" accessibilityRole="button" onPress={() => setActionsOpen(true)} style={styles.detailHeaderButton}>
+              <MoreHorizontal color="#475569" size={21} />
+            </Pressable>
+          ) : null}
         </View>
 
         {isLoading ? (
@@ -4381,7 +4383,15 @@ const MemoDetailModal = ({
           </View>
         )}
         {memo && !memo.isDeleted ? (
-          <Pressable accessibilityLabel="编辑笔记" accessibilityRole="button" onPress={() => onRichEdit(memo)} style={styles.detailEditFab}>
+          <Pressable
+            accessibilityLabel="编辑笔记"
+            accessibilityRole="button"
+            onPress={() => {
+              beginEditorStartup();
+              onRichEdit(memo);
+            }}
+            style={styles.detailEditFab}
+          >
             <Pencil color="#ffffff" size={22} />
           </Pressable>
         ) : null}
@@ -4757,7 +4767,7 @@ const RichEditorModal = ({
               style={styles.createMemoTitleInput}
               value={title}
             />
-            <View style={styles.createMemoMetaRow}>
+            <View style={[styles.createMemoMetaRow, styles.richStandaloneMetaRow]}>
               <Pressable accessibilityLabel="所在笔记本" accessibilityRole="button" onPress={() => setNotebookPickerOpen(true)} style={styles.createMemoNotebookButton}>
                 <Text numberOfLines={1} style={styles.createMemoNotebookText}>{notebookLabel}</Text>
                 <ChevronDown color="#64748b" size={14} />
@@ -4771,7 +4781,7 @@ const RichEditorModal = ({
                 }}
                 placeholder="添加标签，用逗号分隔"
                 placeholderTextColor="#94a3b8"
-                style={styles.createMemoTagsInput}
+                style={[styles.createMemoTagsInput, styles.richStandaloneTagsInput]}
                 value={tagsText}
               />
             </View>
@@ -7667,6 +7677,8 @@ const baseWorkspaceStyles = StyleSheet.create({
   richEditorContainer: {
     backgroundColor: "#ffffff",
     flex: 1,
+    paddingHorizontal: 12,
+    paddingTop: 14,
   },
   richEditorMeta: {
     alignItems: "center",
@@ -7737,6 +7749,13 @@ const baseWorkspaceStyles = StyleSheet.create({
   },
   richEditorFrame: {
     flex: 1,
+    marginHorizontal: -12,
+  },
+  richStandaloneMetaRow: {
+    minHeight: 30,
+  },
+  richStandaloneTagsInput: {
+    minHeight: 30,
   },
   richEditorLoading: {
     alignItems: "center",

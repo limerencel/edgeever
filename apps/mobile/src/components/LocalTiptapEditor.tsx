@@ -6,7 +6,7 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import type { TiptapDoc } from "@edgeever/shared";
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from "expo/dom";
-import { useCallback, useEffect, useRef, type Ref } from "react";
+import { useCallback, useEffect, useRef, type ReactNode, type Ref } from "react";
 
 type EditorDoc = TiptapDoc;
 
@@ -144,27 +144,71 @@ export default function LocalTiptapEditor(props: LocalTiptapEditorProps) {
     <div className="edgeever-editor-shell">
       <style>{getEditorStyles(props.theme)}</style>
       <div aria-label={props.locale === "en-US" ? "Editor toolbar" : "编辑器工具栏"} className="edgeever-editor-toolbar" role="toolbar">
-        <ToolbarButton label={props.locale === "en-US" ? "Upload image" : "上传图片"} onRun={() => void insertImage()} text={props.locale === "en-US" ? "+ Image" : "＋图"} />
-        <ToolbarButton active={Boolean(toolbarState & 1)} label={props.locale === "en-US" ? "Bold" : "加粗"} onRun={() => editor?.chain().focus().toggleBold().run()} text="B" />
-        <ToolbarButton active={Boolean(toolbarState & 8)} label={props.locale === "en-US" ? "Bullet list" : "无序列表"} onRun={() => editor?.chain().focus().toggleBulletList().run()} text="•" />
-        <ToolbarButton active={Boolean(toolbarState & 16)} label={props.locale === "en-US" ? "Quote" : "引用"} onRun={() => editor?.chain().focus().toggleBlockquote().run()} text="❝" />
-        <ToolbarButton label={props.locale === "en-US" ? "Horizontal rule" : "分割线"} onRun={() => editor?.chain().focus().setHorizontalRule().run()} text="—" />
+        <ToolbarButton icon={<ImagePlusIcon />} label={props.locale === "en-US" ? "Upload image" : "上传图片"} onRun={() => void insertImage()} />
+        <ToolbarButton active={Boolean(toolbarState & 1)} icon={<BoldIcon />} label={props.locale === "en-US" ? "Bold" : "加粗"} onRun={() => editor?.chain().focus().toggleBold().run()} />
+        <ToolbarButton active={Boolean(toolbarState & 8)} icon={<ListIcon />} label={props.locale === "en-US" ? "Bullet list" : "无序列表"} onRun={() => editor?.chain().focus().toggleBulletList().run()} />
+        <ToolbarButton active={Boolean(toolbarState & 16)} icon={<QuoteIcon />} label={props.locale === "en-US" ? "Quote" : "引用"} onRun={() => editor?.chain().focus().toggleBlockquote().run()} />
+        <ToolbarButton icon={<MinusIcon />} label={props.locale === "en-US" ? "Horizontal rule" : "分割线"} onRun={() => editor?.chain().focus().setHorizontalRule().run()} />
       </div>
       <EditorContent editor={editor} />
     </div>
   );
 }
 
-const ToolbarButton = ({ active = false, label, onRun, text }: { active?: boolean; label: string; onRun: () => void; text: string }) => (
+const ToolbarButton = ({ active = false, icon, label, onRun }: { active?: boolean; icon: ReactNode; label: string; onRun: () => void }) => (
   <button
     aria-label={label}
+    aria-pressed={active}
     className={active ? "is-active" : undefined}
     onMouseDown={(event) => event.preventDefault()}
     onClick={onRun}
     type="button"
   >
-    {text}
+    {icon}
   </button>
+);
+
+const EditorIcon = ({ children, size, strokeWidth }: { children: ReactNode; size: number; strokeWidth: number }) => (
+  <svg aria-hidden="true" fill="none" height={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} viewBox="0 0 24 24" width={size}>
+    {children}
+  </svg>
+);
+
+// Keep the same Lucide paths as the PWA toolbar without pulling the full icon
+// barrel into the standalone DOM bundle (which adds roughly 1.8 MB in Metro).
+const ImagePlusIcon = () => (
+  <EditorIcon size={18} strokeWidth={2}>
+    <path d="M16 5h6" />
+    <path d="M19 2v6" />
+    <path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
+    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    <circle cx="9" cy="9" r="2" />
+  </EditorIcon>
+);
+
+const BoldIcon = () => (
+  <EditorIcon size={17} strokeWidth={2.4}>
+    <path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8" />
+  </EditorIcon>
+);
+
+const ListIcon = () => (
+  <EditorIcon size={18} strokeWidth={2.2}>
+    <path d="M3 5h.01M3 12h.01M3 19h.01M8 5h13M8 12h13M8 19h13" />
+  </EditorIcon>
+);
+
+const QuoteIcon = () => (
+  <EditorIcon size={17} strokeWidth={2.2}>
+    <path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z" />
+    <path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z" />
+  </EditorIcon>
+);
+
+const MinusIcon = () => (
+  <EditorIcon size={18} strokeWidth={2.4}>
+    <path d="M5 12h14" />
+  </EditorIcon>
 );
 
 const mapImageSources = (doc: EditorDoc, mapSource: (source: string) => string): EditorDoc => {
@@ -209,13 +253,13 @@ const getEditorStyles = (theme: "light" | "dark") => `
   html, body, #root { width: 100%; height: 100%; margin: 0; background: ${theme === "dark" ? "#0f172a" : "#fff"}; }
   body { overflow: hidden; color: ${theme === "dark" ? "#f8fafc" : "#0f172a"}; }
   .edgeever-editor-shell { display: flex; height: 100%; min-height: 100%; flex-direction: column; background: ${theme === "dark" ? "#0f172a" : "#fff"}; }
-  .edgeever-editor-toolbar { display: flex; flex: 0 0 auto; gap: 6px; overflow-x: auto; padding: 8px 10px; border-bottom: 1px solid ${theme === "dark" ? "#334155" : "#e2e8f0"}; background: ${theme === "dark" ? "#020617" : "#f8fafc"}; scrollbar-width: none; }
+  .edgeever-editor-toolbar { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; min-height: 38px; overflow-x: auto; padding: 6px 12px; border-block: 1px solid ${theme === "dark" ? "#334155" : "#f1f5f9"}; background: ${theme === "dark" ? "#0f172a" : "#fff"}; scrollbar-width: none; }
   .edgeever-editor-toolbar::-webkit-scrollbar { display: none; }
-  .edgeever-editor-toolbar button { min-width: 38px; height: 36px; padding: 0 10px; border: 0; border-radius: 9px; background: ${theme === "dark" ? "#1e293b" : "#fff"}; color: ${theme === "dark" ? "#e2e8f0" : "#475569"}; font: inherit; font-size: 14px; font-weight: 700; box-shadow: inset 0 0 0 1px ${theme === "dark" ? "#475569" : "#e2e8f0"}; }
-  .edgeever-editor-toolbar button.is-active { background: #ccfbf1; color: #0f766e; box-shadow: inset 0 0 0 1px #5eead4; }
+  .edgeever-editor-toolbar button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; min-height: 32px; padding: 0; border: 1px solid transparent; border-radius: 999px; background: transparent; color: ${theme === "dark" ? "#cbd5e1" : "#64748b"}; }
+  .edgeever-editor-toolbar button:active, .edgeever-editor-toolbar button.is-active { border-color: ${theme === "dark" ? "#166534" : "#bbf7d0"}; background: ${theme === "dark" ? "#14532d" : "#ecfdf5"}; color: ${theme === "dark" ? "#86efac" : "#047857"}; }
   .tiptap { min-height: 100%; outline: none; }
   .edgeever-editor-shell > div:last-child { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-  .edgeever-editor-content { min-height: 100%; padding: 18px 18px 40vh; font-size: 17px; line-height: 1.7; word-break: break-word; caret-color: #0f766e; }
+  .edgeever-editor-content { min-height: 100%; padding: 18px 12px 32px; font-size: 17px; line-height: 1.7; word-break: break-word; caret-color: #0f766e; }
   .edgeever-editor-content > :first-child { margin-top: 0; }
   .edgeever-editor-content p.is-editor-empty:first-child::before { float: left; height: 0; color: #94a3b8; content: attr(data-placeholder); pointer-events: none; }
   .edgeever-editor-content h1, .edgeever-editor-content h2, .edgeever-editor-content h3 { line-height: 1.3; }
