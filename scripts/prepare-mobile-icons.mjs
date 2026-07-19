@@ -7,8 +7,8 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const mobileAssetsDir = path.join(projectRoot, "apps/mobile/assets");
 const sharedIconPath = path.join(projectRoot, "apps/web/public/pwa-512x512.png");
 const mobileIconPath = path.join(mobileAssetsDir, "icon.png");
-const adaptiveIconSourcePath = path.join(mobileAssetsDir, "adaptive-icon-foreground.svg");
-const adaptiveIconPath = path.join(mobileAssetsDir, "adaptive-icon-foreground.png");
+const adaptiveIconSourcePath = path.join(mobileAssetsDir, "adaptive-icon-transparent.svg");
+const adaptiveIconPath = path.join(mobileAssetsDir, "adaptive-icon-transparent.png");
 
 await mkdir(mobileAssetsDir, { recursive: true });
 await copyFile(sharedIconPath, mobileIconPath);

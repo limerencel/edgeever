@@ -43,7 +43,7 @@ bun run prepare:mobile:icons
 PREBUILD_FINGERPRINT="$({
   shasum \
     apps/mobile/app.json \
-    apps/mobile/assets/adaptive-icon-foreground.svg \
+    apps/mobile/assets/adaptive-icon-transparent.svg \
     apps/web/public/pwa-512x512.png \
     bun.lock
 } | shasum | awk '{print $1}')"
