@@ -71,7 +71,7 @@
     },
     "apps/extension": {
       "name": "@edgeever/extension",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@mozilla/readability": "^0.6.0",
         "turndown": "^7.2.4",
@@ -79,7 +79,7 @@
     },
     "apps/mobile": {
       "name": "@edgeever/mobile",
-      "version": "0.4.15",
+      "version": "0.4.16",
       "dependencies": {
         "@edgeever/client": "workspace:*",
         "@edgeever/shared": "workspace:*",
