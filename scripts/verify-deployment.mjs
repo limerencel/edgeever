@@ -55,7 +55,9 @@ const main = () => {
   const tableNames = new Set(parseD1Rows(schemaOutput).map((row) => row.name));
   const missingTables = REQUIRED_TABLES.filter((table) => !tableNames.has(table));
   if (missingTables.length > 0) {
-    throw new Error(`Remote D1 migrations are incomplete; missing tables: ${missingTables.join(", ")}.`);
+    throw new Error(
+      `Remote D1 migrations are incomplete; missing tables: ${missingTables.join(", ")}. Run bun run db:migrate:remote and retry deployment.`,
+    );
   }
   console.log(`[ok] remote D1 schema: ${REQUIRED_TABLES.length} required tables`);
 

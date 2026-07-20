@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildWranglerInvocation,
+  buildWranglerEnvironment,
+  isD1MigrationApplyCommand,
   resolveWranglerCliPath,
   runWranglerSync,
 } from "../scripts/wrangler-runner.mjs";
@@ -23,5 +25,16 @@ describe("cross-platform Wrangler runner", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  test("forces D1 migration apply into non-interactive CI mode", () => {
+    const args = ["--config", "generated.toml", "d1", "migrations", "apply", "DB", "--remote"];
+
+    expect(isD1MigrationApplyCommand(args)).toBe(true);
+    expect(buildWranglerEnvironment(args, { EXISTING: "value" })).toMatchObject({
+      EXISTING: "value",
+      CI: "true",
+    });
+    expect(buildWranglerEnvironment(["d1", "migrations", "list", "DB"], {})).not.toHaveProperty("CI");
   });
 });

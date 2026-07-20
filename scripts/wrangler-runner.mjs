@@ -10,6 +10,16 @@ export const buildWranglerInvocation = (args, options = {}) => ({
   args: [resolveWranglerCliPath(options.cwd), ...args],
 });
 
+export const isD1MigrationApplyCommand = (args) => {
+  const command = args.join(" ");
+  return /(?:^|\s)d1\s+migrations\s+apply(?:\s|$)/.test(command);
+};
+
+export const buildWranglerEnvironment = (args, env = process.env) => ({
+  ...env,
+  ...(isD1MigrationApplyCommand(args) ? { CI: "true" } : {}),
+});
+
 export const runWranglerSync = (args, options = {}) => {
   const cwd = options.cwd ?? resolve(".");
   const cliPath = resolveWranglerCliPath(cwd);
@@ -28,5 +38,6 @@ export const runWranglerSync = (args, options = {}) => {
     cwd,
     shell: false,
     ...spawnOptions,
+    env: buildWranglerEnvironment(args, spawnOptions.env),
   });
 };
