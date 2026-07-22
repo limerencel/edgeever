@@ -439,7 +439,7 @@ app.get("/api/v1/auth/session", async (c) => {
     return c.json({
       authRequired: false,
       authenticated: true,
-      demoMode: isDemoMode(c.env),
+      demoMode: isDemoMode(c.env) || isLocalDemoSeedEnabled(c.env),
       user: {
         id: "local",
         username: "owner",
@@ -454,7 +454,7 @@ app.get("/api/v1/auth/session", async (c) => {
   return c.json({
     authRequired: true,
     authenticated: Boolean(auth && auth.kind === "user"),
-    demoMode: isDemoMode(c.env),
+    demoMode: isDemoMode(c.env) || isLocalDemoSeedEnabled(c.env),
     user:
       auth && auth.kind === "user"
         ? {
@@ -588,7 +588,7 @@ app.post("/api/v1/auth/login", zValidator("json", LoginSchema), async (c) => {
   return c.json({
     authRequired: true,
     authenticated: true,
-    demoMode: isDemoMode(c.env),
+    demoMode: isDemoMode(c.env) || isLocalDemoSeedEnabled(c.env),
     sessionToken: session.token,
     user: {
       id: user.id,

@@ -420,6 +420,13 @@ export const NotebookPane = ({
             label={t("notebookPane.allMemos")}
             onClick={onBackToList}
           />
+          {demoMode && onResetDemo && (
+            <SidebarNavButton
+              icon={<RotateCcw className={cn("h-4 w-4 text-amber-600", isResettingDemo && "animate-spin")} />}
+              label={isResettingDemo ? t("demo.resetting") : t("demo.resetButton")}
+              onClick={onResetDemo}
+            />
+          )}
         </nav>
 
         <div className="group mb-2 flex items-center justify-between gap-2">
