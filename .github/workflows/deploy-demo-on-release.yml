@@ -30,7 +30,7 @@ jobs:
       EDGE_EVER_SESSION_TTL_DAYS: ${{ secrets.EDGE_EVER_DEMO_SESSION_TTL_DAYS }}
       EDGE_EVER_DEMO_MODE: "true"
       EDGE_EVER_DEMO_RESET_CRON: "0 19 * * *"
-      EDGE_EVER_CUSTOM_DOMAIN: ${{ secrets.EDGE_EVER_DEMO_CUSTOM_DOMAIN }}
+      DEMO_DEPLOY_DOMAIN: ${{ secrets.EDGE_EVER_DEMO_CUSTOM_DOMAIN }}
 
     steps:
       - name: Checkout release
@@ -50,5 +50,5 @@ jobs:
         run: bun run deploy
 
       - name: Verify Demo URL
-        if: env.EDGE_EVER_CUSTOM_DOMAIN != ''
-        run: curl --fail --silent --show-error --location --max-time 20 "https://${EDGE_EVER_CUSTOM_DOMAIN}/"
+        if: env.DEMO_DEPLOY_DOMAIN != ''
+        run: curl --fail --silent --show-error --location --max-time 20 "https://${DEMO_DEPLOY_DOMAIN}/"
