@@ -60,6 +60,14 @@ bun run build:android:apk:local
 
 生产签名环境文件和密钥必须位于仓库外（默认使用 `~/.config/edgeever/android/signing.env`），不得写入仓库、Release 正文或日志。
 
+### Release 加速原则
+
+- 先确定并同步所有版本号，再开始 APK 构建，避免因版本修正重复打包。
+- Web/API-only Release 不重复构建 APK；仅当变更影响移动端运行时代码、共享移动依赖、原生配置或构建工具时才重新构建。
+- APK 构建优先使用 Expo 增量模式 `bunx expo prebuild --platform android --no-clean --no-install`，保留 Gradle/CMake 缓存并避免自动改写依赖文件；只有原生工程确实需要重建时才清理。
+- 依赖未变化时不要在每次 Release 重复安装；Release 脚本应缓存依赖并在 lockfile 变化时才重新安装。
+- 推荐将版本同步、验证、APK 判断、构建校验、提交、推送、打标签和创建 Release 串成一个命令，确保 APK 构建完成且验证通过后再推送和发布。
+
 ## Cloudflare 自动部署约束
 
 当用户要求根据 GitHub 项目链接将本项目安装部署到 Cloudflare 时，必须先完整阅读并严格按照 `docs/agent-deploy-cloudflare.md` 执行。该文档是此部署流程的唯一操作规范；不要在本文件重复维护部署命令、密码配置或 Workers Builds 步骤。
