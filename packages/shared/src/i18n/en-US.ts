@@ -463,6 +463,8 @@ export const enUS = {
     switchToNotebook: "Switch to {{name}}",
     attachmentInsertText: "Attachment: {{filename}} {{url}}",
     placeholder: "Start writing...",
+    noteBodyAria: "Note body",
+    markdownSourceAria: "Markdown source",
     loading: "Loading",
     emptySelection: "Select or create a note",
     saveState: {
@@ -512,6 +514,10 @@ export const enUS = {
     replaceAll: "Replace all",
     closeSearch: "Close search",
     editMemo: "Edit note",
+    openEditor: "Open editor",
+    paste: "Paste",
+    typeInput: "Type",
+    clipboardReadFailed: "Could not read the clipboard. Check that your browser allows clipboard access.",
     characterCount: "{{count}} chars",
   },
   editorToolbar: {
