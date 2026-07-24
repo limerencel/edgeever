@@ -1,35 +1,34 @@
-# 使用 Cloudflare 一键部署 EdgeEver
+# 从 Fork 在线部署 EdgeEver
 
-**Deploy to Cloudflare** 按钮是推荐的首次安装方式。它会在你的 GitHub 账号中创建仓库，为 EdgeEver 产品创建 Worker、D1 数据库和 R2 存储桶，执行数据库 migration，并将仓库连接到 Cloudflare Workers Builds。它不会部署 `apps/site` 中的官方产品官网；该官网是只属于上游仓库的独立 Cloudflare Pages 项目。
+## 首次部署
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/tianma-if/edgeever)
+1. [Fork EdgeEver](https://github.com/tianma-if/edgeever/fork)。
+2. 在 Cloudflare **Workers & Pages** 导入这个 Fork。
+3. 使用仓库根目录和 `main` 分支，读取仓库中的 `wrangler.toml`。
+4. 配置：
+   - D1 binding：`DB`，数据库名：`edgeever`
+   - R2 binding：`RESOURCES`，bucket 名称自定义且唯一
+   - Worker Secret：`EDGE_EVER_AUTH_PASSWORD`
+5. 设置构建命令：
 
-## 首次安装
+   ```text
+   Build command: bun install --frozen-lockfile && EDGE_EVER_DEPLOYMENT_TRIGGER=main_push EDGE_EVER_DEPLOYMENT_METHOD=cloudflare_workers_builds bun run build:cloudflare
+   Deploy command: bun run deploy:cloudflare-builds
+   ```
 
-1. 登录 Cloudflare 和 GitHub，然后打开上方按钮。
-2. 按提示授权 **Cloudflare Workers & Pages** GitHub App。
-3. 选择目标仓库名、Worker 名称、D1 数据库名称和 R2 bucket 名称。
-4. 为 `EDGE_EVER_AUTH_PASSWORD` 设置仅供当前实例使用的强密码。该字段是 Worker Secret，不得提交到 Git。
-5. 保存并部署。Cloudflare 会执行仓库统一的部署流水线：构建、远程 D1 migration、Worker 发布和部署验证。
-6. 打开生成的 `*.workers.dev` 地址，确认 `/api/health` 返回 `200` 和 `"ok": true`，然后使用用户名 `admin` 和刚设置的密码登录。
+6. 启动构建。部署完成后确认 `/api/health` 返回 `200` 和 `"ok": true`，再测试登录。
+7. 在 Fork 的 **Actions** 中启用并运行一次 **Update deployed EdgeEver**。
 
-EdgeEver 采用安全关闭策略。D1 migration 或鉴权 Secret 缺失时，实例会返回 `database_not_ready` 或 `auth_not_configured`，不会暴露免登录工作区。
+## 更新通道
 
-## 自动更新
+默认跟随正式 Release。跟随上游 `main` 时创建：
 
-生成的仓库会连接 Workers Builds，因此任何推送到 `main` 的提交都会自动构建、迁移、验证并发布。仓库还包含 **Update deployed EdgeEver** 工作流，每天检查一次上游更新。
+```text
+EDGE_EVER_UPDATE_CHANNEL=edge
+```
 
-默认 `stable` 通道跟随最新的正式 GitHub Release。发布更新前，工作流会在本地合并并验证依赖安装、本地 D1 migration、自动化测试、类型检查和生产 Web 构建。合并冲突或验证失败时不会修改线上 `main`，并会尝试创建 Issue 提供恢复提示。
+## 排错
 
-如果希望跟随上游最新 `main`，请创建名为 `EDGE_EVER_UPDATE_CHANNEL`、值为 `edge` 的 GitHub Repository Variable。也可以手动运行该工作流，并为本次运行选择任一通道。
-
-GitHub 的定时任务可能延迟，也可能因公共仓库长期无活动而被停用。如果每日更新停止，请打开仓库的 **Actions** 页面，启用 **Update deployed EdgeEver** 并手动运行一次。遇到更新冲突时不要 force push，应解决冲突或恢复为未定制的部署仓库。
-
-该更新工作流也支持 Cloudflare 一键部署生成的仓库。此类仓库最初只有一个合成的 `source repo import` 提交，并不包含上游 Git 历史；第一次成功更新时，工作流会自动建立与上游的历史连接。如果仓库是在更新工作流加入之前创建的，请从上游复制当前的 `.github/workflows/sync-edgeever-upstream.yml` 到该仓库，提交到 `main`，然后在 **Actions** 中手动运行一次。该自动初始化仅适用于未定制的部署仓库；已经修改过代码的仓库需要先人工处理差异。
-
-## 其他部署入口
-
-- 需要由 Agent 使用自定义配置执行同一套确定性 CLI 部署时，使用 [AI Agent Cloudflare Deployment](agent-deploy-cloudflare.md)。
-- 高级配置、故障排查或紧急恢复时，使用 [Cloudflare 手动部署指南](manual-deploy.zh-CN.md)。
-
-三个入口共用产品 Worker 的构建、migration、发布和验证命令，不需要部署官方产品官网。首次安装完成后，它们都会汇合到 Workers Builds 和同一套自动更新工作流。
+- 构建失败：查看 Cloudflare Worker 的 **Deployments** 日志。
+- 更新没有运行：打开 Fork 的 **Actions**，启用 **Update deployed EdgeEver** 并手动运行。
+- 恢复部署：[手动部署指南](manual-deploy.zh-CN.md)。

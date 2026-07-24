@@ -85,22 +85,25 @@ EdgeEver 内置了 **REST API**、**OpenAPI 协议** 以及 **Remote MCP (Model 
 
 EdgeEver 的部署简单到了极致，甚至你都不需要打开终端。
 
-### 方式 A：AI Agent 一句话部署（推荐）
+### 方式 A：Fork 后在线部署（推荐）
 
-将下面这段话，复制给你的 AI 助手（如 Claude Code, Cursor, Antigravity 等）：
+先 Fork EdgeEver 上游仓库，然后在 Cloudflare Workers & Pages 中导入自己的 Fork，在线配置 D1、R2、Worker Secret 和构建命令。部署完成后，启用仓库中的上游更新工作流，后续版本会自动同步、验证并部署。
+
+[Fork EdgeEver](https://github.com/tianma-if/edgeever/fork) 后，参考[在线部署文档](../deploy-cloudflare-button.zh-CN.md)完成配置。
+
+### 方式 B：AI Agent 一句话部署
+
+将下面这段话复制给你的 AI 助手（如 Claude Code、Cursor、Antigravity 等）：
 
 ```text
-请按以下流程操作：
-1. Fork EdgeEver 上游仓库：https://github.com/tianma-if/edgeever
-2. 使用 Fork 后的仓库，将 EdgeEver 安装并部署到 Cloudflare。
-3. 为 Fork 仓库配置从上游仓库同步更新的机制，使其能够定期或按需获取上游仓库的最新代码与产品特性。
+请先 Fork https://github.com/tianma-if/edgeever，然后克隆这个 Fork。
+严格按照 docs/agent-deploy-cloudflare.md 创建 Cloudflare 资源、完成首次部署，并配置 Workers Builds 和 Update deployed EdgeEver 工作流。
+验证健康检查、首次构建和上游自动更新都成功后，再向我报告部署完成。
 ```
 
-AI 助手将自动帮你在 Cloudflare 上建好 D1、R2，配置好 Worker 路由并一键发布上线。
+AI 助手会代为在 Cloudflare 上创建 D1、R2，配置 Worker Secret，完成部署，并接通持续更新链路。
 
-### 方式 B：手动部署（10 秒搞定）
-
-如果你喜欢自己动手，只需在本地拉下代码，运行几条简单的辅助命令：
+高级恢复时才需要手动运行部署命令：
 
 ```sh
 # 1. 复制环境变量

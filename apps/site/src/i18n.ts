@@ -128,8 +128,8 @@ export const siteCopy = {
       description: "把最关键的上手路径放到显眼位置：先部署自己的实例，再把旧笔记迁过来，最后用 MCP 接入 AI Agent 整理长期知识库。",
       items: [
         {
-          title: "三种方式部署 EdgeEver",
-          summary: "Cloudflare 一键部署、AI Agent 和手动部署三种方案任选其一，使用同一套可靠的部署流程。",
+          title: "两种方式部署 EdgeEver",
+          summary: "Fork 后在线部署，或让 AI Agent 代为完成同一套线上配置流程。",
           href: "/blog/ai-agent-deploy-cloudflare",
           cta: "查看部署指南",
         },
@@ -251,8 +251,8 @@ export const siteCopy = {
       description: "The fastest paths into EdgeEver: deploy your own instance, move an existing Evernote archive, then connect MCP-powered AI workflows.",
       items: [
         {
-          title: "Three ways to deploy EdgeEver",
-          summary: "Choose Cloudflare one-click, an AI Agent, or manual deployment—all three use the same reliable deployment pipeline.",
+          title: "Two ways to deploy EdgeEver",
+          summary: "Deploy online from a GitHub Fork, or let an AI Agent complete the same online configuration flow.",
           href: "/blog/ai-agent-deploy-cloudflare",
           cta: "Read deployment guide",
         },

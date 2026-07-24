@@ -54,44 +54,24 @@ The public demo resets every Monday at 1:00 AM (China Standard Time) and restore
 
 ## Deployment
 
-Choose any one of the following three options to complete deployment.
+### Option A: Deploy online from a Fork (Recommended)
 
-### Option A: Deploy to Cloudflare (Recommended)
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/tianma-if/edgeever)
-
-One-click deployment creates a dedicated GitHub repository and the required Cloudflare resources, then automatically redeploys after the repository's daily upstream sync; see [Deploy EdgeEver with Cloudflare](docs/deploy-cloudflare-button.md) for setup and troubleshooting.
+[Fork EdgeEver on GitHub](https://github.com/tianma-if/edgeever/fork), then follow the [online deployment guide](docs/deploy-cloudflare-button.md).
 
 ### Option B: Deploy with an AI Agent
 
-> 💡 **Note:** Under the hood, AI Agent deployment uses the exact same deterministic CLI commands (Wrangler and Bun scripts) as the manual flow. The AI agent simply executes these standard commands in the terminal on your behalf for convenience; it is not a non-deterministic, black-box deployment.
- 
-Copy this prompt into your AI coding assistant, such as Claude Code, Codex, OpenClaw, Antigravity, or Cursor. It uses the same deployment core as the button and manual flows:
-
-**Recommendation:** Before deployment, configure GitHub and Cloudflare MCP servers, plugins, or other supported integrations for your AI Agent.
+Copy this prompt into an AI Agent with GitHub and Cloudflare access:
 
 ```text
-Please follow these steps:
-1. Create a GitHub repository from https://github.com/tianma-if/edgeever and clone it locally.
-2. Follow docs/agent-deploy-cloudflare.md to create Cloudflare resources and run `bun run deploy:manual`.
-3. Run `bun run deploy:builds:setup` to connect the deployed Worker to the repository's `main` branch through Cloudflare Workers Builds. If setup needs a token, use a User API Token, not an Account API Token.
-4. Verify the first automatic build and the daily upstream-update workflow.
+Deploy EdgeEver online:
+1. Fork https://github.com/tianma-if/edgeever.
+2. Import the Fork into Cloudflare Workers & Pages.
+3. Configure D1, R2, the `EDGE_EVER_AUTH_PASSWORD` Worker Secret, and the production `main` build.
+4. Start the first build and verify `/api/health`, `/api/openapi.json`, and login.
+5. Enable and run `Update deployed EdgeEver` once.
 ```
 
-Agents should follow [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare.md).
-
-After the first deployment, see [Cloudflare Workers Builds](docs/cloudflare-workers-builds.md). All installation entry points use the same build, migration, deployment, and verification pipeline.
-
-> Common pitfall: Cloudflare R2, D1, and Workers may still require a Visa card during activation or usage, even when you stay within the free quotas.
-
-### Option C: Manual Deployment
-
-Please refer to the [Cloudflare Manual Deployment Guide](docs/manual-deploy.md) for advanced first-time installation, Cloudflare resource setup, troubleshooting, and emergency recovery. After the first deployment, connect Workers Builds; future repository updates deploy automatically.
-
-The automated helper commands are recommended. The manual template uses `admin` / `admin123` for the initial login, and the password can be changed later in Personal Settings. If you create the Cloudflare resources manually, finish configuring `.env.local`—including the D1 ID, R2 bucket, and the 400-day session limit—before running `bun run deploy:manual`.
-
-Production deployments fail closed: when D1 migrations or the login Secret are missing, the instance shows a diagnosable configuration error and denies access instead of falling back to an unauthenticated workspace. Never insert plaintext passwords into D1; use the recovery command documented in the manual deployment guide.
-
+Detailed requirements: [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare.md).
 
 ## Multi-Account Login
 

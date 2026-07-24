@@ -1,35 +1,34 @@
-# Deploy EdgeEver with Cloudflare
+# Deploy EdgeEver online from a Fork
 
-The **Deploy to Cloudflare** button is the recommended first-installation path. It creates a repository in your GitHub account, provisions the EdgeEver product Worker, D1 database, and R2 bucket, applies the database migrations, and connects the repository to Cloudflare Workers Builds. It does not deploy the official marketing site in `apps/site`; that site is a separate upstream-only Cloudflare Pages project.
+## First installation
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/tianma-if/edgeever)
+1. [Fork EdgeEver](https://github.com/tianma-if/edgeever).
+2. In Cloudflare **Workers & Pages**, import the Fork.
+3. Use the repository root and `main` branch. Keep the repository's `wrangler.toml`.
+4. Configure:
+   - D1 binding: `DB`, database name: `edgeever`
+   - R2 binding: `RESOURCES`, with a unique bucket name
+   - Worker Secret: `EDGE_EVER_AUTH_PASSWORD`
+5. Set the build commands:
 
-## First Installation
+   ```text
+   Build command: bun install --frozen-lockfile && EDGE_EVER_DEPLOYMENT_TRIGGER=main_push EDGE_EVER_DEPLOYMENT_METHOD=cloudflare_workers_builds bun run build:cloudflare
+   Deploy command: bun run deploy:cloudflare-builds
+   ```
 
-1. Sign in to Cloudflare and GitHub, then open the button above.
-2. Authorize the **Cloudflare Workers & Pages** GitHub App when requested.
-3. Choose the destination repository, Worker name, D1 database name, and R2 bucket name.
-4. Set `EDGE_EVER_AUTH_PASSWORD` to a strong password that is unique to this instance. The field is a Worker Secret and must not be committed to Git.
-5. Save and deploy. Cloudflare runs the repository's common deployment pipeline: build, remote D1 migrations, Worker deployment, and deployment verification.
-6. Open the resulting `*.workers.dev` URL. Confirm `/api/health` returns `200` with `"ok": true`, then sign in as `admin` with the password chosen during setup.
+6. Start the build. Confirm that `/api/health` returns `200` with `"ok": true`, then test login.
+7. In the Fork's **Actions**, enable and run **Update deployed EdgeEver** once.
 
-EdgeEver fails closed. If the D1 migrations or authentication Secret are missing, the instance returns `database_not_ready` or `auth_not_configured` instead of exposing an unauthenticated workspace.
+## Update channel
 
-## Automatic Updates
+The default follows formal Releases. To follow upstream `main`, create:
 
-The generated repository is connected to Workers Builds, so every push to `main` builds, migrates, verifies, and deploys the instance. It also contains the **Update deployed EdgeEver** workflow, which checks the upstream repository once per day.
+```text
+EDGE_EVER_UPDATE_CHANNEL=edge
+```
 
-The default `stable` channel follows the latest formal GitHub Release. Before publishing an update, the workflow merges it locally and verifies dependency installation, local D1 migrations, automated tests, type checking, and the production web build. A failed merge or check leaves the deployed `main` branch unchanged and attempts to create an Issue with recovery guidance.
+## Troubleshooting
 
-To follow the latest upstream `main` instead, create a GitHub repository variable named `EDGE_EVER_UPDATE_CHANNEL` with the value `edge`. You can also run the workflow manually and select either channel for that run.
-
-GitHub may delay scheduled workflows and may disable them for an inactive public repository. If daily updates stop, open the repository's **Actions** tab, enable **Update deployed EdgeEver**, and run it manually once. Do not force-push over update conflicts; resolve them or return to an unmodified deployment repository.
-
-The updater also bootstraps repositories created by the Cloudflare Deploy button. Those repositories start with a synthetic `source repo import` commit instead of the upstream Git history, so the first successful update creates the history connection automatically. If the repository was created before the updater workflow was added, copy the current `.github/workflows/sync-edgeever-upstream.yml` from upstream into the repository, commit it to `main`, and run it manually once from **Actions**. The bootstrap is safe only for an unmodified deployment repository; customized repositories must be reconciled manually first.
-
-## Alternative Entry Points
-
-- Use [AI Agent Cloudflare Deployment](agent-deploy-cloudflare.md) when an agent should perform the same deterministic CLI deployment with custom configuration.
-- Use [Cloudflare Manual Deployment](manual-deploy.md) for advanced configuration, troubleshooting, or emergency recovery.
-
-All three entry points share the same product Worker build, migration, deployment, and verification commands. They do not require the official site. After first installation, they converge on Workers Builds and the same automatic-update workflow.
+- Build failure: inspect the Worker **Deployments** log.
+- No updates: open the Fork's **Actions**, enable **Update deployed EdgeEver**, and run it manually.
+- Recovery: [Cloudflare Manual Deployment](manual-deploy.md).
