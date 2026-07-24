@@ -837,7 +837,10 @@ export const WorkspaceApp = ({
     notebooks.find(
       (notebook) => notebook.id === "nb_inbox" || notebook.slug === "inbox" || notebook.name === "等待分类"
     )?.id ?? null;
-  const canCreateMemo = Boolean(defaultMemoNotebookId && memoView !== "trash");
+  const createMemoNotebookId =
+    (selectedNotebookId && notebooks.some((notebook) => notebook.id === selectedNotebookId) ? selectedNotebookId : null) ??
+    defaultMemoNotebookId;
+  const canCreateMemo = Boolean(createMemoNotebookId && memoView !== "trash");
   const memoSelectionModeActive = memoSelectionMode || selectedMemoIds.size > 0;
   const mobileSearchActive = mobileBottomNavActive === "search";
   const workspaceBackTargetActive = Boolean(
@@ -1658,14 +1661,16 @@ export const WorkspaceApp = ({
   };
 
   const handleCreateMemo = (template?: MemoTemplate) => {
-    if (!defaultMemoNotebookId || memoView === "trash") {
+    const targetNotebookId = createMemoNotebookId;
+
+    if (!targetNotebookId || memoView === "trash") {
       return;
     }
 
     setTemplatesOpen(false);
     setMobileBottomNavActive("home");
     createMemoMutation.mutate({
-      notebookId: defaultMemoNotebookId,
+      notebookId: targetNotebookId,
       title: template?.title ?? "",
       contentMarkdown: template?.contentMarkdown ?? "",
       tags: template?.tags ?? [],
