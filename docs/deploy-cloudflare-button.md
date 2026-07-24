@@ -1,4 +1,4 @@
-# Deploy EdgeEver Online from a Fork
+# EdgeEver Manual Online Deployment Guide
 
 This document provides a detailed step-by-step guide for deploying EdgeEver online via GitHub and Cloudflare. The entire setup is performed in your browser—**no local code installation or environment setup is required**.
 
