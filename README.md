@@ -75,7 +75,7 @@ Deploy EdgeEver online:
 
 ### Option B: Manual Online Deployment
 
-No command line needed—complete setup in 4 simple web steps:
+Complete setup in 4 simple web steps:
 
 1. **Fork the Repository**: Click **Fork** at the top right of GitHub to copy EdgeEver to your personal account.
 2. **Import into Cloudflare**: Log into the Cloudflare Dashboard, navigate to **Workers & Pages**, and choose to import your Fork repository.
