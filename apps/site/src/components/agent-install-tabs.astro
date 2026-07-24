@@ -7,17 +7,17 @@ const isEnglish = locale === "en-US";
 const copy = isEnglish
   ? {
       chooseOne: "Choose either option to complete deployment.",
-      oneClick: "Option B: Deploy from a Fork",
+      oneClick: "Option B: Manual online deployment",
       agent: "Option A: AI Agent deployment",
       recommended: "Recommended",
       oneClickIntro:
-        "Complete deployment in 4 steps: Fork EdgeEver, import it into Cloudflare Workers & Pages, configure the required resources, then run and verify the first build. See the online deployment guide for details.",
+        "No command line needed—complete setup in 4 simple web steps: Fork EdgeEver, import it into Cloudflare Workers & Pages, configure required resources & secret, then run and verify the first build. See the online deployment guide for details.",
       forkButton: "Fork EdgeEver on GitHub",
       oneClickGuide: "Open the online deployment guide",
       oneClickGuideHref:
         "https://github.com/tianma-if/edgeever/blob/main/docs/deploy-cloudflare-button.md",
       agentIntro:
-        "Copy the prompt below to an AI Agent configured with GitHub and Cloudflare MCP servers, plugins, or other integrations.",
+        "Copy the prompt below to an AI Agent configured with GitHub and Cloudflare MCP servers, plugins, or other integrations (such as Codex, Claude, Cursor, Antigravity, OpenClaw, Hermes Agent, etc.):",
       promptLabel: "Prompt",
       copyPrompt: "Copy prompt",
       copying: "Copying...",
@@ -30,15 +30,15 @@ const copy = isEnglish
     }
   : {
       chooseOne: "以下两种方案任选其一即可完成部署。",
-      oneClick: "方案二：Fork 后在线部署",
-      agent: "方案一：AI Agent 一句话部署",
+      oneClick: "方案二：手动在线部署",
+      agent: "方案一：AI Agent 一键部署",
       recommended: "推荐",
-      oneClickIntro: "共 4 步完成部署：Fork EdgeEver、导入 Cloudflare Workers & Pages、配置所需资源、启动并验证首次构建。详细操作请查看在线部署文档。",
+      oneClickIntro: "无需命令行，仅需在网页端完成 4 步极简配置：Fork EdgeEver、导入 Cloudflare Workers & Pages、配置所需资源与密码、启动并验证首次构建。详细操作请查看在线部署文档。",
       forkButton: "在 GitHub Fork EdgeEver",
       oneClickGuide: "查看在线部署文档",
       oneClickGuideHref:
         "https://github.com/tianma-if/edgeever/blob/main/docs/deploy-cloudflare-button.zh-CN.md",
-      agentIntro: "将下方提示词复制给已配置 GitHub、Cloudflare MCP、插件或其他可用集成的 AI Agent。",
+      agentIntro: "将下方提示词直接复制发送给已配置 GitHub、Cloudflare MCP/插件或其他可用集成的 AI Agent（如 Codex, Claude, Cursor, Antigravity, OpenClaw, Hermes Agent 等）：",
       promptLabel: "提示词",
       copyPrompt: "复制提示词",
       copying: "复制中...",
