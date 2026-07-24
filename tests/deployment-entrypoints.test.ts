@@ -54,10 +54,10 @@ describe("Cloudflare deployment entrypoints", () => {
 
     expect(englishReadme).not.toContain("deploy.workers.cloudflare.com");
     expect(englishReadme).not.toContain("Option C: Manual Deployment");
-    expect(englishReadme).toContain("Fork EdgeEver");
+    expect(englishReadme).toContain("Fork https://github.com/tianma-if/edgeever");
     expect(chineseReadme).not.toContain("deploy.workers.cloudflare.com");
     expect(chineseReadme).not.toContain("方案 C：手动部署");
-    expect(chineseReadme).toContain("Fork EdgeEver");
+    expect(chineseReadme).toContain("Fork https://github.com/tianma-if/edgeever");
   });
 
   test("AI Agent deployment remains fully online", () => {
