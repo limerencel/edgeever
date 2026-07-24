@@ -54,9 +54,13 @@ The public demo resets every Monday at 1:00 AM (China Standard Time) and restore
 
 ## Deployment
 
+EdgeEver uses a pure Serverless architecture that runs entirely within Cloudflare's free tiers. **No VPS or server rental is required, and there is no need to configure Docker or SSL certificates.**
+
+You can deploy online using either of the following two options:
+
 ### Option A: Deploy with an AI Agent (Recommended)
 
-Copy this prompt into an AI Agent configured with GitHub and Cloudflare MCP servers, plugins, or other integrations:
+Copy this prompt into an AI Agent configured with GitHub and Cloudflare MCP servers, plugins, or other integrations (such as Codex, Claude, Cursor, Antigravity, OpenClaw, Hermes Agent, etc.):
 
 ```text
 Deploy EdgeEver online:
@@ -67,11 +71,18 @@ Deploy EdgeEver online:
 5. Enable and run `Update deployed EdgeEver` once.
 ```
 
-Detailed requirements: [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare.md).
+> Detailed requirements: [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare.md).
 
-### Option B: Deploy online from a Fork
+### Option B: Manual Online Deployment
 
-Complete deployment in 4 steps: Fork EdgeEver on GitHub, import it into Cloudflare Workers & Pages, configure the required resources, then run and verify the first build. See the [online deployment guide](docs/deploy-cloudflare-button.md) for details.
+No command line needed—complete setup in 4 simple web steps:
+
+1. **Fork the Repository**: Click **Fork** at the top right of GitHub to copy EdgeEver to your personal account.
+2. **Import into Cloudflare**: Log into the Cloudflare Dashboard, navigate to **Workers & Pages**, and choose to import your Fork repository.
+3. **Bind Resources & Password**: Bind the D1 database (`DB`), R2 bucket (`RESOURCES`), and set the Worker Secret `EDGE_EVER_AUTH_PASSWORD` as your admin password.
+4. **Build & Verify**: Start the first build with default settings. Once complete, visit `/api/health` to verify a `200` response before logging in.
+
+> 📖 For full step-by-step instructions and configuration details, see the [Online Deployment Guide](docs/deploy-cloudflare-button.md).
 
 ## Multi-Account Login
 
