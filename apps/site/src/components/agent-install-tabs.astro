@@ -7,17 +7,17 @@ const isEnglish = locale === "en-US";
 const copy = isEnglish
   ? {
       chooseOne: "Choose either option to complete deployment.",
-      oneClick: "Option A: Deploy from a Fork",
-      agent: "Option B: AI Agent deployment",
+      oneClick: "Option B: Deploy from a Fork",
+      agent: "Option A: AI Agent deployment",
       recommended: "Recommended",
       oneClickIntro:
-        "Fork EdgeEver on GitHub, import the Fork into Cloudflare Workers & Pages, and configure the deployment online.",
+        "Complete deployment in 4 steps: Fork EdgeEver, import it into Cloudflare Workers & Pages, configure the required resources, then run and verify the first build. See the online deployment guide for details.",
       forkButton: "Fork EdgeEver on GitHub",
       oneClickGuide: "Open the online deployment guide",
       oneClickGuideHref:
         "https://github.com/tianma-if/edgeever/blob/main/docs/deploy-cloudflare-button.md",
       agentIntro:
-        "Copy the prompt below to your AI assistant (Claude Code, Codex, Cursor, and similar tools).",
+        "Copy the prompt below to an AI Agent configured with GitHub and Cloudflare MCP servers, plugins, or other integrations.",
       promptLabel: "Prompt",
       copyPrompt: "Copy prompt",
       copying: "Copying...",
@@ -30,15 +30,15 @@ const copy = isEnglish
     }
   : {
       chooseOne: "以下两种方案任选其一即可完成部署。",
-      oneClick: "方案一：Fork 后在线部署",
-      agent: "方案二：AI Agent 一句话部署",
+      oneClick: "方案二：Fork 后在线部署",
+      agent: "方案一：AI Agent 一句话部署",
       recommended: "推荐",
-      oneClickIntro: "先在 GitHub Fork EdgeEver，再将 Fork 导入 Cloudflare Workers & Pages，在线完成部署配置。",
+      oneClickIntro: "共 4 步完成部署：Fork EdgeEver、导入 Cloudflare Workers & Pages、配置所需资源、启动并验证首次构建。详细操作请查看在线部署文档。",
       forkButton: "在 GitHub Fork EdgeEver",
       oneClickGuide: "查看在线部署文档",
       oneClickGuideHref:
         "https://github.com/tianma-if/edgeever/blob/main/docs/deploy-cloudflare-button.zh-CN.md",
-      agentIntro: "将下方提示词复制给你的 AI 助手（Claude Code、Codex、Cursor 等）。",
+      agentIntro: "将下方提示词复制给已配置 GitHub、Cloudflare MCP、插件或其他可用集成的 AI Agent。",
       promptLabel: "提示词",
       copyPrompt: "复制提示词",
       copying: "复制中...",
@@ -58,22 +58,22 @@ const copy = isEnglish
     <button
       class="agent-install-tab active relative px-3 py-4 text-brand transition hover:text-brand-text"
       type="button"
-      data-tab-target="one-click"
+      data-tab-target="agent"
       aria-selected="true">
-      <span>{copy.oneClick}</span>
+      <span>{copy.agent}</span>
       <span class="ml-1 rounded-full bg-brand/10 px-2 py-0.5 text-xs text-brand">{copy.recommended}</span>
     </button>
     <button
       class="agent-install-tab relative px-3 py-4 text-slate-500 transition hover:text-brand-text"
       type="button"
-      data-tab-target="agent"
+      data-tab-target="one-click"
       aria-selected="false">
-      {copy.agent}
+      {copy.oneClick}
     </button>
   </div>
 
   <div class="mt-8 overflow-hidden rounded-[28px] bg-slate-100 px-6 py-8 sm:px-10 md:px-14">
-    <div class="agent-install-panel" data-tab-panel="one-click">
+    <div class="agent-install-panel hidden" data-tab-panel="one-click">
       <p class="mx-auto max-w-3xl text-center text-lg leading-9 text-slate-600">{copy.oneClickIntro}</p>
       <div class="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <a
@@ -94,7 +94,7 @@ const copy = isEnglish
       </div>
     </div>
 
-    <div class="agent-install-panel hidden" data-tab-panel="agent">
+    <div class="agent-install-panel" data-tab-panel="agent">
       <p class="mx-auto mb-8 max-w-3xl text-center text-lg leading-9 text-slate-600">
         {copy.agentIntro}
       </p>

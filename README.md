@@ -54,13 +54,9 @@ The public demo resets every Monday at 1:00 AM (China Standard Time) and restore
 
 ## Deployment
 
-### Option A: Deploy online from a Fork (Recommended)
+### Option A: Deploy with an AI Agent (Recommended)
 
-[Fork EdgeEver on GitHub](https://github.com/tianma-if/edgeever/fork), then follow the [online deployment guide](docs/deploy-cloudflare-button.md).
-
-### Option B: Deploy with an AI Agent
-
-Copy this prompt into an AI Agent with GitHub and Cloudflare access:
+Copy this prompt into an AI Agent configured with GitHub and Cloudflare MCP servers, plugins, or other integrations:
 
 ```text
 Deploy EdgeEver online:
@@ -72,6 +68,10 @@ Deploy EdgeEver online:
 ```
 
 Detailed requirements: [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare.md).
+
+### Option B: Deploy online from a Fork
+
+[Fork EdgeEver on GitHub](https://github.com/tianma-if/edgeever/fork), then follow the [online deployment guide](docs/deploy-cloudflare-button.md).
 
 ## Multi-Account Login
 

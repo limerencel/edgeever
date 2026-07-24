@@ -129,7 +129,7 @@ export const siteCopy = {
       items: [
         {
           title: "两种方式部署 EdgeEver",
-          summary: "Fork 后在线部署，或让 AI Agent 代为完成同一套线上配置流程。",
+          summary: "让 AI Agent 代为完成线上部署，或手动 Fork 后在线配置同一套流程。",
           href: "/blog/ai-agent-deploy-cloudflare",
           cta: "查看部署指南",
         },
@@ -252,7 +252,7 @@ export const siteCopy = {
       items: [
         {
           title: "Two ways to deploy EdgeEver",
-          summary: "Deploy online from a GitHub Fork, or let an AI Agent complete the same online configuration flow.",
+          summary: "Let an AI Agent complete the online deployment, or configure the same flow online from a GitHub Fork.",
           href: "/blog/ai-agent-deploy-cloudflare",
           cta: "Read deployment guide",
         },
