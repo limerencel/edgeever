@@ -2,7 +2,7 @@
 
 ## First installation
 
-1. [Fork EdgeEver](https://github.com/tianma-if/edgeever).
+1. Fork EdgeEver on GitHub.
 2. In Cloudflare **Workers & Pages**, import the Fork.
 3. Use the repository root and `main` branch. Keep the repository's `wrangler.toml`.
 4. Configure:

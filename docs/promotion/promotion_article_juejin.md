@@ -101,7 +101,7 @@ EdgeEver 的部署简单到了极致，甚至你都不需要打开终端。
 
 先 Fork EdgeEver 上游仓库，然后在 Cloudflare Workers & Pages 中导入自己的 Fork，在线配置 D1、R2、Worker Secret 和构建命令。部署完成后，启用仓库中的上游更新工作流，后续版本会自动同步、验证并部署。
 
-[Fork EdgeEver](https://github.com/tianma-if/edgeever/fork) 后，参考[在线部署文档](../deploy-cloudflare-button.zh-CN.md)完成配置。
+在 GitHub Fork EdgeEver 后，参考[在线部署文档](../deploy-cloudflare-button.zh-CN.md)完成配置。
 
 高级恢复时才需要手动运行部署命令：
 

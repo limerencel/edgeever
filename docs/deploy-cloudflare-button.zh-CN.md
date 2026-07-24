@@ -2,7 +2,7 @@
 
 ## 首次部署
 
-1. [Fork EdgeEver](https://github.com/tianma-if/edgeever/fork)。
+1. 在 GitHub Fork EdgeEver。
 2. 在 Cloudflare **Workers & Pages** 导入这个 Fork。
 3. 使用仓库根目录和 `main` 分支，读取仓库中的 `wrangler.toml`。
 4. 配置：
