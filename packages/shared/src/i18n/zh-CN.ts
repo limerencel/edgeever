@@ -204,6 +204,12 @@ export const zhCN = {
     mermaidThemeDescription: "选择笔记中图表的视觉主题。",
     editorThemeTitle: "编辑器主题",
     editorThemeDescription: "选择正文编辑区的排版风格，偏好会保存在当前浏览器中。",
+    editorContentAlignmentTitle: "笔记正文布局",
+    editorContentAlignmentDescription: "选择桌面端所有笔记的正文显示方式，偏好会保存在当前浏览器中。",
+    editorContentAlignments: {
+      center: "优化可读性（居中）",
+      start: "靠左显示",
+    },
     editorThemes: {
       default: "系统默认",
       "minimal-emerald": "minimal品牌绿",
@@ -533,6 +539,7 @@ export const zhCN = {
     append: "追加到笔记",
     replace: "替换笔记",
     replaceSelection: "接受并替换选中内容",
+    applyFailed: "无法应用生成结果。请重新选择内容后再试。",
     configure: "请先在“我的 → AI 集成”中配置 AI 模型。",
   },
   accountInfo: {
@@ -575,7 +582,7 @@ export const zhCN = {
     unknown: "未知",
     copy: "复制信息",
     updateAvailableTitle: "发现新版本",
-    updateAvailableDescription: "已有新版本 {{version}}，可查看更新内容后升级。",
+    updateAvailableDescription: "<paragraph>新版本 <strong>v{{version}}</strong> 已发布。Cloudflare 和 Docker 实例默认每日自动更新。</paragraph><paragraph><strong>请勿使用 Sync fork</strong>，可能导致分支冲突。</paragraph><paragraph>如需手动更新：Cloudflare 用户可运行 <strong>Update deployed EdgeEver</strong> 工作流；Docker 用户可运行 <strong>~/edgeever/update.sh</strong>。</paragraph><paragraph><strong>桌面客户端</strong>新版本可前往 Releases 页面下载。</paragraph>",
     viewRelease: "查看更新",
     latestVersion: "当前已是最新版本",
     closeUpdateNotice: "关闭新版本提示",
@@ -682,6 +689,14 @@ export const zhCN = {
         label: "替换文本",
         description: "在当前笔记中打开替换。",
       },
+      saveAndSync: {
+        label: "保存并同步",
+        description: "立即保存当前笔记，并同步等待中的本地更改。",
+      },
+      toggleEditorMode: {
+        label: "切换编辑模式",
+        description: "在 Markdown 源码与富文本编辑模式之间切换。",
+      },
     },
   },
   options: {
@@ -695,6 +710,7 @@ export const zhCN = {
       titleAsc: "标题 A-Z",
     },
     notebookSort: {
+      custom: "自定义",
       nameAsc: "名称",
       memoCountDesc: "笔记数量",
       updatedDesc: "更新日期",
@@ -870,6 +886,11 @@ export const zhCN = {
     imageSizeLarge: "较大",
     imageSizeFull: "铺满",
     resizeImage: "拖拽调整图片宽度",
+    previewImage: "预览大图",
+    imageViewer: "图片查看器",
+    imageZoomIn: "放大图片",
+    imageZoomOut: "缩小图片",
+    closeImagePreview: "关闭图片查看器",
     resourceActions: {
       download: "下载",
       saveAs: "导出",
@@ -1194,7 +1215,12 @@ export const zhCN = {
     warning: "此操作无法撤销。尚未同步的笔记和更改将永久丢失。",
     confirm: "清除本地数据",
     clearing: "正在清除...",
-    error: "无法清除本地数据，请重试。",
+    errors: {
+      unsafeDataDirectory: "无法确认本地数据目录可以安全删除，尚未更改任何数据。",
+      applicationBundleNotFound: "无法识别清除后需要重新启动的已安装应用。请将 EdgeEver 重新安装到“应用程序”后再试。",
+      helperStartFailed: "无法启动 macOS 数据清理助手，尚未更改任何数据。请重新启动应用后再试。",
+      unexpected: "清除本地数据前发生意外错误，尚未更改任何数据。请重新启动应用后再试。",
+    },
   },
   loginDevices: {
     title: "登录设备",
@@ -1388,7 +1414,7 @@ export const zhCN = {
     closeNotice: "关闭更新通知",
     sidebarInstall: "下载桌面客户端",
     sidebarInstallTitle: "下载 EdgeEver 桌面客户端",
-    sidebarInstallAvailability: "Mac 可用 · Windows 敬请期待",
+    sidebarInstallAvailability: "Mac/iOS/安卓可用 · Windows 敬请期待",
     sidebarClipper: "安装浏览器剪藏插件",
     sidebarClipperTitle: "安装 EdgeEver 浏览器剪藏插件",
     iosPrompt: {

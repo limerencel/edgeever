@@ -204,6 +204,12 @@ export const enUS = {
     mermaidThemeDescription: "Choose the visual theme for diagrams in notes.",
     editorThemeTitle: "Editor theme",
     editorThemeDescription: "Choose a writing style for the note editor. Saved in this browser.",
+    editorContentAlignmentTitle: "Note content layout",
+    editorContentAlignmentDescription: "Choose how note content is displayed across all notes on desktop. Saved in this browser.",
+    editorContentAlignments: {
+      center: "Optimize readability (centered)",
+      start: "Align left",
+    },
     editorThemes: {
       default: "System default",
       "minimal-emerald": "Minimal Emerald",
@@ -533,6 +539,7 @@ export const enUS = {
     append: "Append to note",
     replace: "Replace note",
     replaceSelection: "Accept and replace selection",
+    applyFailed: "Could not apply the generated result. Select the content again and retry.",
     configure: "Configure an AI model in Me → AI Integrations first.",
   },
   accountInfo: {
@@ -575,7 +582,7 @@ export const enUS = {
     unknown: "Unknown",
     copy: "Copy info",
     updateAvailableTitle: "New version available",
-    updateAvailableDescription: "Version {{version}} is available. Review what’s new before updating.",
+    updateAvailableDescription: "<paragraph>Version <strong>v{{version}}</strong> is available. Cloudflare and Docker instances update automatically each day by default.</paragraph><paragraph><strong>Do not use Sync fork</strong>; it may cause branch conflicts.</paragraph><paragraph>To update manually, Cloudflare users can run the <strong>Update deployed EdgeEver</strong> workflow, while Docker users can run <strong>~/edgeever/update.sh</strong>.</paragraph><paragraph>The latest <strong>desktop app</strong> is available from the Releases page.</paragraph>",
     viewRelease: "View update",
     latestVersion: "You are running the latest version",
     closeUpdateNotice: "Close update notice",
@@ -682,6 +689,14 @@ export const enUS = {
         label: "Replace text",
         description: "Open replace in the current note.",
       },
+      saveAndSync: {
+        label: "Save and sync",
+        description: "Save the current note now and sync pending local changes.",
+      },
+      toggleEditorMode: {
+        label: "Switch editor mode",
+        description: "Switch between Markdown source and rich text editing.",
+      },
     },
   },
   options: {
@@ -695,6 +710,7 @@ export const enUS = {
       titleAsc: "Title A-Z",
     },
     notebookSort: {
+      custom: "Custom",
       nameAsc: "Name",
       memoCountDesc: "Note count",
       updatedDesc: "Updated date",
@@ -870,6 +886,11 @@ export const enUS = {
     imageSizeLarge: "Large",
     imageSizeFull: "Full",
     resizeImage: "Drag to resize image width",
+    previewImage: "Preview image",
+    imageViewer: "Image viewer",
+    imageZoomIn: "Zoom in image",
+    imageZoomOut: "Zoom out image",
+    closeImagePreview: "Close image viewer",
     resourceActions: {
       download: "Download",
       saveAs: "Export",
@@ -1194,7 +1215,12 @@ export const enUS = {
     warning: "This action cannot be undone. Any notes or changes that have not been synced will be permanently lost.",
     confirm: "Clear local data",
     clearing: "Clearing...",
-    error: "Local data could not be cleared. Please try again.",
+    errors: {
+      unsafeDataDirectory: "EdgeEver could not verify that the local data folder is safe to remove. Your data was not changed.",
+      applicationBundleNotFound: "EdgeEver could not identify the installed app needed to restart after clearing. Reinstall EdgeEver in Applications and try again.",
+      helperStartFailed: "EdgeEver could not start the macOS data-clearing helper. Your data was not changed. Restart the app and try again.",
+      unexpected: "An unexpected error occurred before local data could be cleared. Your data was not changed. Restart the app and try again.",
+    },
   },
   loginDevices: {
     title: "Signed-in devices",
@@ -1388,7 +1414,7 @@ export const enUS = {
     closeNotice: "Close update notice",
     sidebarInstall: "Download Desktop Client",
     sidebarInstallTitle: "Download the EdgeEver Desktop Client",
-    sidebarInstallAvailability: "Mac available · Windows coming soon",
+    sidebarInstallAvailability: "Mac/iOS/Android available · Windows soon",
     sidebarClipper: "Install Web Clipper",
     sidebarClipperTitle: "Install the EdgeEver Web Clipper",
     iosPrompt: {

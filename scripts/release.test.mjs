@@ -6,6 +6,7 @@ import {
   buildReleaseTitle,
   nextVersion,
   parseReleaseArgs,
+  RELEASE_WORKFLOWS,
   RELEASE_VALIDATIONS,
   resolveReleaseVersion,
   reusedAssetMatches,
@@ -13,6 +14,10 @@ import {
 } from "./release.mjs";
 
 describe("release automation", () => {
+  test("prepares and audits the official Docker image with every formal release", () => {
+    expect(RELEASE_WORKFLOWS.docker).toBe("docker-image.yml");
+  });
+
   test("runs the complete project regression suite before release", () => {
     expect(RELEASE_VALIDATIONS).toContainEqual({
       label: "Project regression tests",
@@ -160,6 +165,10 @@ describe("release automation", () => {
     expect(notes).toContain("Related Issue: #126");
     expect(notes).toContain("## 🇨🇳 中文说明 / Chinese Changelog");
     expect(notes).toContain("关联 Issue：#126");
+    expect(notes.indexOf("## 🇨🇳 中文说明 / Chinese Changelog"))
+      .toBeLessThan(notes.indexOf("## Key Changes"));
+    expect(notes.indexOf("优化发布流程。"))
+      .toBeLessThan(notes.indexOf("Improve the release flow."));
     expect(notes).not.toContain("## Verification");
     expect(notes).not.toContain("## 验证");
     expect(notes).not.toContain("bun run");

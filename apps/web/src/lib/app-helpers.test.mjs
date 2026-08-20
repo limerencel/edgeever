@@ -1,10 +1,21 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  DEFAULT_SHORTCUT_SETTINGS,
   DEFAULT_SYNC_INTERVAL_MS,
   DESKTOP_FOCUS_MODE_STORAGE_KEY,
+  EDITOR_CONTENT_ALIGNMENT_STORAGE_KEY,
+  NOTEBOOK_SORT_STORAGE_KEY,
+  SHORTCUT_SETTINGS_STORAGE_KEY,
   SYNC_INTERVAL_STORAGE_KEY,
+  getShortcutActionForEvent,
+  getNotebookSortComparator,
+  readEditorContentAlignmentPreference,
+  readNotebookSortPreference,
   readSyncIntervalPreference,
   readDesktopFocusModePreference,
+  readShortcutSettingsPreference,
+  writeEditorContentAlignmentPreference,
+  writeNotebookSortPreference,
   writeSyncIntervalPreference,
   writeDesktopFocusModePreference,
 } from "./app-helpers.ts";
@@ -70,6 +81,66 @@ describe("desktop focus mode preference", () => {
   });
 });
 
+describe("editor content alignment preference", () => {
+  test("defaults to left aligned and persists both supported alignments", () => {
+    const values = installLocalStorage();
+    expect(readEditorContentAlignmentPreference()).toBe("start");
+
+    writeEditorContentAlignmentPreference("start");
+    expect(values.get(EDITOR_CONTENT_ALIGNMENT_STORAGE_KEY)).toBe("start");
+    expect(readEditorContentAlignmentPreference()).toBe("start");
+
+    writeEditorContentAlignmentPreference("center");
+    expect(values.get(EDITOR_CONTENT_ALIGNMENT_STORAGE_KEY)).toBe("center");
+    expect(readEditorContentAlignmentPreference()).toBe("center");
+  });
+
+  test("falls back to left aligned for unknown or unavailable storage", () => {
+    const values = installLocalStorage();
+    values.set(EDITOR_CONTENT_ALIGNMENT_STORAGE_KEY, "unexpected");
+    expect(readEditorContentAlignmentPreference()).toBe("start");
+
+    globalThis.window = {
+      localStorage: {
+        getItem: () => {
+          throw new Error("blocked");
+        },
+      },
+    };
+    expect(readEditorContentAlignmentPreference()).toBe("start");
+  });
+});
+
+describe("custom notebook sorting", () => {
+  test("persists the custom sort mode", () => {
+    const values = installLocalStorage();
+    writeNotebookSortPreference("custom");
+    expect(values.get(NOTEBOOK_SORT_STORAGE_KEY)).toBe("custom");
+    expect(readNotebookSortPreference()).toBe("custom");
+  });
+
+  test("orders notebooks by persisted sort order with a stable name fallback", () => {
+    const compare = getNotebookSortComparator("custom");
+    const base = {
+      parentId: null,
+      slug: null,
+      icon: null,
+      color: null,
+      memoCount: 0,
+      lastMemoUpdatedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const notebooks = [
+      { ...base, id: "third", name: "C", sortOrder: 30 },
+      { ...base, id: "second", name: "B", sortOrder: 20 },
+      { ...base, id: "first", name: "A", sortOrder: 20 },
+    ];
+
+    expect(notebooks.sort(compare).map((item) => item.id)).toEqual(["first", "second", "third"]);
+  });
+});
+
 describe("automatic sync interval preference", () => {
   test("defaults to 30 seconds", () => {
     installLocalStorage();
@@ -114,5 +185,54 @@ describe("automatic sync interval preference", () => {
       },
     };
     expect(readSyncIntervalPreference()).toBe(30_000);
+  });
+});
+
+describe("workspace shortcut preferences", () => {
+  test("provides save, sync, and editor mode defaults", () => {
+    expect(DEFAULT_SHORTCUT_SETTINGS.saveAndSync).toEqual({
+      key: "s",
+      ctrlOrMeta: true,
+      shift: false,
+      alt: false,
+    });
+    expect(DEFAULT_SHORTCUT_SETTINGS.toggleEditorMode).toEqual({
+      key: "/",
+      ctrlOrMeta: true,
+      shift: false,
+      alt: false,
+    });
+  });
+
+  test("fills new shortcut actions into legacy stored settings", () => {
+    const values = installLocalStorage();
+    values.set(SHORTCUT_SETTINGS_STORAGE_KEY, JSON.stringify({
+      createMemo: { key: "m", ctrlOrMeta: true, shift: false, alt: false },
+    }));
+
+    const settings = readShortcutSettingsPreference();
+    expect(settings.createMemo.key).toBe("m");
+    expect(settings.saveAndSync).toEqual(DEFAULT_SHORTCUT_SETTINGS.saveAndSync);
+    expect(settings.toggleEditorMode).toEqual(DEFAULT_SHORTCUT_SETTINGS.toggleEditorMode);
+  });
+
+  test("recognizes Ctrl and Command variants for the new actions", () => {
+    const keyboardEvent = (key, modifiers = {}) => ({
+      key,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      ...modifiers,
+    });
+
+    expect(getShortcutActionForEvent(
+      keyboardEvent("s", { ctrlKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+    )).toBe("saveAndSync");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("/", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+    )).toBe("toggleEditorMode");
   });
 });
