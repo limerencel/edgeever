@@ -209,17 +209,10 @@ const copy = siteCopy[locale].hero;
   (function () {
     function formatCount(count) {
       if (typeof count !== "number") return String(count);
-      try {
-        return new Intl.NumberFormat("en", {
-          notation: "compact",
-          maximumFractionDigits: 1,
-        }).format(count).toLowerCase();
-      } catch (e) {
-        if (count >= 1000) {
-          return (Math.round(count / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k";
-        }
-        return count.toLocaleString();
+      if (count >= 1000) {
+        return (count / 1000).toFixed(1).replace(/\.0$/, "") + "k";
       }
+      return count.toLocaleString();
     }
 
     async function fetchGitHubStats() {
